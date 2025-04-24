@@ -1,0 +1,91 @@
+import { useState, useEffect } from "react";
+import { Header } from "@/components/layout/header";
+import { RoadmapTypeSwitch } from "@/components/roadmap/roadmap-type-switch";
+import { RoadmapGrid } from "@/components/roadmap/roadmap-grid";
+import { CurrentLearning } from "@/components/dashboard/current-learning";
+import { ProgressStats } from "@/components/dashboard/progress-stats";
+import { ActivityChart } from "@/components/dashboard/activity-chart";
+import { seedRoadmaps } from "@/lib/seed";
+import { useQuery } from "@tanstack/react-query";
+
+export default function HomePage() {
+  const [roadmapType, setRoadmapType] = useState("role");
+  
+  // Check if we need to seed roadmaps
+  const { data: roadmaps = [] } = useQuery({
+    queryKey: ["/api/roadmaps"],
+  });
+
+  // Seed roadmaps if none exist
+  useEffect(() => {
+    if (roadmaps.length === 0) {
+      seedRoadmaps();
+    }
+  }, [roadmaps]);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <Header />
+      
+      <main className="flex-grow container mx-auto px-4 py-6">
+        {/* Roadmap Type Switch */}
+        <RoadmapTypeSwitch 
+          onChange={setRoadmapType} 
+          initialType={roadmapType}
+        />
+        
+        {/* Role-Based Roadmaps */}
+        {roadmapType === "role" && (
+          <RoadmapGrid 
+            title="Role-Based Roadmaps" 
+            type="role"
+          />
+        )}
+        
+        {/* Skill-Based Roadmaps */}
+        {roadmapType === "skill" && (
+          <RoadmapGrid 
+            title="Skill-Based Roadmaps" 
+            type="skill"
+          />
+        )}
+        
+        {/* Continue Learning Section */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Continue Learning</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Last active roadmap */}
+            <CurrentLearning />
+            
+            {/* Learning stats */}
+            <div className="space-y-6">
+              <ProgressStats />
+              <ActivityChart />
+            </div>
+          </div>
+        </div>
+        
+        {/* Popular Skill-Based Roadmaps */}
+        {roadmapType === "role" && (
+          <RoadmapGrid 
+            title="Popular Skill-Based Roadmaps" 
+            type="skill"
+            limit={4}
+          />
+        )}
+        
+        {/* Popular Role-Based Roadmaps */}
+        {roadmapType === "skill" && (
+          <RoadmapGrid 
+            title="Popular Role-Based Roadmaps" 
+            type="role"
+            limit={3}
+          />
+        )}
+      </main>
+    </div>
+  );
+}
