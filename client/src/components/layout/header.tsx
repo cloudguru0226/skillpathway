@@ -37,25 +37,17 @@ export function Header() {
 
   const NavLinks = () => (
     <>
-      <Link href="/">
-        <a className={`hover:text-primary transition-colors ${location === '/' ? 'text-primary' : 'text-muted-foreground'}`}>
-          Home
-        </a>
+      <Link href="/" className={`hover:text-primary transition-colors ${location === '/' ? 'text-primary' : 'text-muted-foreground'}`}>
+        Home
       </Link>
-      <Link href="/roadmaps">
-        <a className={`hover:text-primary transition-colors ${location.startsWith('/roadmap') ? 'text-primary' : 'text-muted-foreground'}`}>
-          Roadmaps
-        </a>
+      <Link href="/roadmaps" className={`hover:text-primary transition-colors ${location.startsWith('/roadmap') ? 'text-primary' : 'text-muted-foreground'}`}>
+        Roadmaps
       </Link>
-      <Link href="/guides">
-        <a className="hover:text-primary transition-colors text-muted-foreground">
-          Guides
-        </a>
+      <Link href="/guides" className="hover:text-primary transition-colors text-muted-foreground">
+        Guides
       </Link>
-      <Link href="/community">
-        <a className="hover:text-primary transition-colors text-muted-foreground">
-          Community
-        </a>
+      <Link href="/community" className="hover:text-primary transition-colors text-muted-foreground">
+        Community
       </Link>
     </>
   );
