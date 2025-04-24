@@ -8,6 +8,38 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
+// Define the structure of the roadmap content
+interface RoadmapNode {
+  title: string;
+  completed?: boolean;
+  inProgress?: boolean;
+}
+
+interface RoadmapSectionType {
+  title: string;
+  description?: string;
+  nodes: RoadmapNode[];
+  completed?: boolean;
+  inProgress?: boolean;
+}
+
+interface RoadmapContent {
+  sections: RoadmapSectionType[];
+}
+
+// Extended type for the roadmap with properly typed content
+interface RoadmapWithContent {
+  id: number;
+  title: string;
+  description: string;
+  type: string;
+  difficulty: string;
+  estimatedTime: string;
+  content: RoadmapContent;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface RoadmapDetailProps {
   roadmapId: string;
 }
@@ -17,7 +49,7 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   
   // Fetch roadmap details
-  const { data: roadmap, isLoading: isLoadingRoadmap } = useQuery<Roadmap>({
+  const { data: roadmap, isLoading: isLoadingRoadmap } = useQuery<RoadmapWithContent>({
     queryKey: [`/api/roadmaps/${roadmapId}`],
     queryFn: async () => {
       const response = await fetch(`/api/roadmaps/${roadmapId}`);
@@ -29,7 +61,7 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   });
 
   // Fetch user progress for this roadmap
-  const { data: progressArray = [], isLoading: isLoadingProgress } = useQuery({
+  const { data: progressArray = [], isLoading: isLoadingProgress } = useQuery<any[]>({
     queryKey: [`/api/progress?roadmapId=${roadmapId}`],
     enabled: !!roadmapId,
   });
@@ -163,46 +195,123 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   }
 
   return (
-    <div className="bg-card rounded-lg max-w-4xl w-full overflow-hidden flex flex-col mx-auto">
-      <div className="p-5 border-b border-border flex justify-between items-center">
-        <h2 className="text-xl font-bold">{roadmap.title}</h2>
+    <div className="bg-card rounded-lg w-full overflow-hidden flex flex-col mx-auto">
+      <div className="p-5 border-b border-border flex justify-between items-center bg-primary/5">
+        <h2 className="text-2xl font-bold text-primary">{roadmap.title}</h2>
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-muted-foreground">Progress:</span>
+          <div className="w-48 flex items-center gap-2">
+            <Progress value={progressPercentage} className="h-2" />
+            <span className="text-sm font-semibold">{progressPercentage}%</span>
+          </div>
+        </div>
       </div>
       
       <div className="p-5 overflow-y-auto flex-grow">
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">About this Roadmap</h3>
-          <p className="text-muted-foreground">{roadmap.description}</p>
-        </div>
-        
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Your Progress</h3>
-            <span className="text-sm text-muted-foreground">{progressPercentage}% Complete</span>
+        {/* Related Roadmaps and Header Area - similar to PDF */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="md:col-span-1 space-y-4">
+            <div className="bg-muted p-4 rounded-lg">
+              <h3 className="text-lg font-semibold mb-2">Related Roadmaps</h3>
+              <ul className="space-y-2">
+                {roadmap.title === "Frontend Developer" && (
+                  <>
+                    <li className="text-primary hover:underline cursor-pointer">Backend Roadmap</li>
+                    <li className="text-primary hover:underline cursor-pointer">Full Stack Roadmap</li>
+                    <li className="text-primary hover:underline cursor-pointer">React</li>
+                  </>
+                )}
+                {roadmap.title === "Backend Developer" && (
+                  <>
+                    <li className="text-primary hover:underline cursor-pointer">Frontend Roadmap</li>
+                    <li className="text-primary hover:underline cursor-pointer">DevOps Roadmap</li>
+                    <li className="text-primary hover:underline cursor-pointer">PostgreSQL</li>
+                  </>
+                )}
+                {roadmap.title === "AWS" && (
+                  <>
+                    <li className="text-primary hover:underline cursor-pointer">Backend Roadmap</li>
+                    <li className="text-primary hover:underline cursor-pointer">DevOps Roadmap</li>
+                  </>
+                )}
+              </ul>
+            </div>
+            
+            <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold mb-2 text-yellow-600">Note</h3>
+              <p className="text-muted-foreground text-sm">
+                This roadmap provides an opinionated list of topics to help you get started. 
+                You don't need to learn everything at once. Focus on what's relevant to your goals.
+              </p>
+            </div>
           </div>
           
-          <Progress value={progressPercentage} className="h-2 mb-4" />
+          <div className="md:col-span-2">
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold mb-2">Introduction</h3>
+              <p className="text-muted-foreground">{roadmap.description}</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 my-4">
+              <div className="bg-primary/5 p-4 rounded-lg">
+                <h4 className="font-semibold mb-1">Difficulty</h4>
+                <p className="text-muted-foreground capitalize">{roadmap.difficulty}</p>
+              </div>
+              <div className="bg-primary/5 p-4 rounded-lg">
+                <h4 className="font-semibold mb-1">Estimated Time</h4>
+                <p className="text-muted-foreground">{roadmap.estimatedTime}</p>
+              </div>
+            </div>
+          </div>
         </div>
         
-        {/* Roadmap Content */}
-        <div className="space-y-4">
+        {/* Roadmap Content in PDF-like format */}
+        <div className="space-y-6">
+          {/* Group sections into steps */}
           {roadmap.content.sections.map((section: any, sectionIndex: number) => (
-            sectionIndex === currentSectionIndex && (
-              <RoadmapSection
-                key={section.title}
-                title={section.title}
-                description={section.description}
-                nodes={section.nodes}
-                completed={section.completed}
-                inProgress={section.inProgress}
-                onNodeClick={(nodeTitle) => {
-                  const nodeIndex = section.nodes.findIndex((n: any) => n.title === nodeTitle);
-                  if (nodeIndex !== -1) {
-                    handleNodeClick(sectionIndex, nodeIndex);
-                  }
-                }}
-              />
-            )
+            <div key={section.title} className="bg-muted p-4 rounded-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-primary">{section.title}</h3>
+                {section.completed ? (
+                  <span className="px-2 py-1 bg-green-500/20 text-green-600 rounded text-xs">Completed</span>
+                ) : section.inProgress ? (
+                  <span className="px-2 py-1 bg-yellow-500/20 text-yellow-600 rounded text-xs">In Progress</span>
+                ) : null}
+              </div>
+              
+              {section.description && (
+                <p className="text-sm text-muted-foreground mb-4">{section.description}</p>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {section.nodes.map((node: any, nodeIndex: number) => (
+                  <div 
+                    key={node.title}
+                    onClick={() => handleNodeClick(sectionIndex, nodeIndex)}
+                    className={`border p-3 rounded-lg cursor-pointer transition-all hover:shadow-md
+                      ${node.completed ? 'bg-green-500/10 border-green-500/30' : 
+                        node.inProgress ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-card border-border'}`}
+                  >
+                    <span className={`text-sm font-medium 
+                      ${node.completed ? 'text-green-600' : 
+                        node.inProgress ? 'text-yellow-600' : 'text-foreground'}`}
+                    >
+                      {node.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
+          
+          {/* Best practices box at the bottom - similar to PDF */}
+          <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 mt-6">
+            <h3 className="text-lg font-semibold text-primary mb-2">Best way to learn?</h3>
+            <p className="text-muted-foreground">
+              Make a simple project and apply the concepts as you learn them. 
+              Practical experience is the best way to reinforce your knowledge.
+            </p>
+          </div>
         </div>
       </div>
       
@@ -210,16 +319,15 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
         <div className="flex justify-between">
           <Button
             variant="outline"
-            onClick={handlePrevSection}
-            disabled={currentSectionIndex === 0}
+            onClick={() => window.history.back()}
           >
-            Previous Section
+            Back to Roadmaps
           </Button>
           <Button
-            onClick={handleNextSection}
-            disabled={currentSectionIndex === roadmap.content.sections.length - 1}
+            onClick={() => {}} // This could be a link to start learning resources
+            variant="default"
           >
-            Next Section
+            Start Learning
           </Button>
         </div>
       </div>

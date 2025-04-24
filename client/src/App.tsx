@@ -22,7 +22,7 @@ function Router() {
       <ProtectedRoute path="/roadmap/:id" component={RoadmapDetailPage} />
       <ProtectedRoute path="/admin" component={AdminPage} />
       <ProtectedRoute path="/profile" component={UserProfile} />
-      <Route component={NotFound} />
+      <Route path="*" component={NotFound} />
     </Switch>
   );
 }
