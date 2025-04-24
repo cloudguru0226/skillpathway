@@ -39,11 +39,22 @@ export default function HomePage() {
       <Header />
       
       <main className="flex-grow container mx-auto px-4 py-6">
-        {/* Roadmap Type Switch */}
-        <RoadmapTypeSwitch 
-          onChange={setRoadmapType} 
-          initialType={roadmapType}
-        />
+        <div className="flex justify-between items-center mb-4">
+          <RoadmapTypeSwitch 
+            onChange={setRoadmapType} 
+            initialType={roadmapType}
+          />
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleManualSeed}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Seed Roadmaps
+          </Button>
+        </div>
         
         {/* Role-Based Roadmaps */}
         {roadmapType === "role" && (
