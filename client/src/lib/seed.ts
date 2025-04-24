@@ -5,19 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 // Function to seed roadmaps on the client side
 export async function seedRoadmaps() {
   try {
-    // Check if roadmaps exist
-    const response = await fetch("/api/roadmaps");
-    const existingRoadmaps = await response.json();
-    
-    // Only seed if no roadmaps exist
-    if (existingRoadmaps.length === 0) {
-      // Create each roadmap
-      for (const roadmap of sampleRoadmaps) {
-        await apiRequest("POST", "/api/roadmaps", roadmap);
-      }
-      
-      console.log('Roadmaps seeded successfully');
-    }
+    // Using the new seed endpoint that doesn't require admin
+    await apiRequest("POST", "/api/seed-roadmaps", { sampleRoadmaps });
+    console.log('Roadmaps seeded successfully');
   } catch (error) {
     console.error('Error seeding roadmaps:', error);
   }

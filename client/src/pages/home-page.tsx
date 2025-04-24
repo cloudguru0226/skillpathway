@@ -5,23 +5,34 @@ import { RoadmapGrid } from "@/components/roadmap/roadmap-grid";
 import { CurrentLearning } from "@/components/dashboard/current-learning";
 import { ProgressStats } from "@/components/dashboard/progress-stats";
 import { ActivityChart } from "@/components/dashboard/activity-chart";
-import { seedRoadmaps } from "@/lib/seed";
+import { seedRoadmaps, useSeedRoadmaps } from "@/lib/seed";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 export default function HomePage() {
   const [roadmapType, setRoadmapType] = useState("role");
+  const seedRoadmapsWithToast = useSeedRoadmaps();
   
   // Check if we need to seed roadmaps
-  const { data: roadmaps = [] } = useQuery({
+  const { data: roadmaps = [], refetch } = useQuery<any[]>({
     queryKey: ["/api/roadmaps"],
   });
 
   // Seed roadmaps if none exist
   useEffect(() => {
-    if (roadmaps.length === 0) {
-      seedRoadmaps();
-    }
+    const checkAndSeedRoadmaps = async () => {
+      if (Array.isArray(roadmaps) && roadmaps.length === 0) {
+        await seedRoadmaps();
+      }
+    };
+    checkAndSeedRoadmaps();
   }, [roadmaps]);
+
+  const handleManualSeed = async () => {
+    await seedRoadmapsWithToast();
+    refetch();
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
