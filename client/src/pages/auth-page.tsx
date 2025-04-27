@@ -77,28 +77,41 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-background flex items-center">
       <div className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row bg-card rounded-xl overflow-hidden shadow-xl max-w-6xl mx-auto">
+        <div className="flex flex-col md:flex-row bg-card rounded-lg overflow-hidden border border-border shadow-xl max-w-6xl mx-auto">
           {/* Form Column */}
-          <div className="w-full md:w-1/2 p-8">
+          <div className="w-full md:w-1/2 p-8 md:p-10">
             <div className="mb-8 flex items-center">
-              <Code className="h-10 w-10 text-primary mr-2" />
+              <div className="bg-primary/10 p-2 rounded-md mr-3">
+                <Code className="h-8 w-8 text-primary" />
+              </div>
               <h1 className="text-2xl font-bold">DevPathways</h1>
             </div>
             
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary">
+                <TabsTrigger 
+                  value="login" 
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Login
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="register"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Register
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="login">
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
+                    <Label htmlFor="username" className="text-foreground">Username</Label>
                     <Input 
                       id="username" 
                       {...loginForm.register("username")} 
-                      placeholder="Enter your username" 
+                      placeholder="Enter your username"
+                      className="bg-background border-border"
                     />
                     {loginForm.formState.errors.username && (
                       <p className="text-destructive text-sm">{loginForm.formState.errors.username.message}</p>
@@ -106,12 +119,13 @@ export default function AuthPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password" className="text-foreground">Password</Label>
                     <Input 
                       id="password" 
                       type="password" 
                       {...loginForm.register("password")} 
-                      placeholder="Enter your password" 
+                      placeholder="Enter your password"
+                      className="bg-background border-border"
                     />
                     {loginForm.formState.errors.password && (
                       <p className="text-destructive text-sm">{loginForm.formState.errors.password.message}</p>
@@ -120,7 +134,7 @@ export default function AuthPage() {
                   
                   <Button 
                     type="submit" 
-                    className="w-full" 
+                    className="w-full mt-8" 
                     disabled={loginMutation.isPending}
                   >
                     {loginMutation.isPending ? "Logging in..." : "Login"}
@@ -129,13 +143,14 @@ export default function AuthPage() {
               </TabsContent>
               
               <TabsContent value="register">
-                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="register-username">Username</Label>
+                    <Label htmlFor="register-username" className="text-foreground">Username</Label>
                     <Input 
                       id="register-username" 
                       {...registerForm.register("username")} 
-                      placeholder="Choose a username" 
+                      placeholder="Choose a username"
+                      className="bg-background border-border"
                     />
                     {registerForm.formState.errors.username && (
                       <p className="text-destructive text-sm">{registerForm.formState.errors.username.message}</p>
@@ -143,12 +158,13 @@ export default function AuthPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email" className="text-foreground">Email</Label>
                     <Input 
                       id="email" 
                       type="email" 
                       {...registerForm.register("email")} 
-                      placeholder="Enter your email" 
+                      placeholder="Enter your email"
+                      className="bg-background border-border"
                     />
                     {registerForm.formState.errors.email && (
                       <p className="text-destructive text-sm">{registerForm.formState.errors.email.message}</p>
@@ -156,12 +172,13 @@ export default function AuthPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="register-password">Password</Label>
+                    <Label htmlFor="register-password" className="text-foreground">Password</Label>
                     <Input 
                       id="register-password" 
                       type="password" 
                       {...registerForm.register("password")} 
-                      placeholder="Create a password" 
+                      placeholder="Create a password"
+                      className="bg-background border-border"
                     />
                     {registerForm.formState.errors.password && (
                       <p className="text-destructive text-sm">{registerForm.formState.errors.password.message}</p>
@@ -169,12 +186,13 @@ export default function AuthPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Label htmlFor="confirm-password" className="text-foreground">Confirm Password</Label>
                     <Input 
                       id="confirm-password" 
                       type="password" 
                       {...registerForm.register("confirmPassword")} 
-                      placeholder="Confirm your password" 
+                      placeholder="Confirm your password"
+                      className="bg-background border-border"
                     />
                     {registerForm.formState.errors.confirmPassword && (
                       <p className="text-destructive text-sm">{registerForm.formState.errors.confirmPassword.message}</p>
@@ -183,7 +201,7 @@ export default function AuthPage() {
                   
                   <Button 
                     type="submit" 
-                    className="w-full" 
+                    className="w-full mt-8" 
                     disabled={registerMutation.isPending}
                   >
                     {registerMutation.isPending ? "Registering..." : "Create Account"}
@@ -194,26 +212,32 @@ export default function AuthPage() {
           </div>
           
           {/* Hero Column */}
-          <div className="w-full md:w-1/2 bg-primary p-8 text-white flex flex-col justify-center">
-            <h2 className="text-3xl font-bold mb-4">Your Roadmap to Success</h2>
-            <p className="mb-6">
-              DevPathways provides structured learning paths for developers at all levels. Track your progress and grow your skills with expert-designed roadmaps.
-            </p>
+          <div className="w-full md:w-1/2 bg-primary/90 p-8 md:p-10 text-white flex flex-col justify-center relative overflow-hidden">
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary rounded-full opacity-50 -translate-y-1/2 translate-x-1/4"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary rounded-full opacity-50 translate-y-1/2 -translate-x-1/4"></div>
             
-            <div className="space-y-4">
-              <div className="flex items-start">
-                <BookOpen className="h-6 w-6 mr-3 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold">Structured Learning Paths</h3>
-                  <p className="text-primary-foreground/80">Follow roadmaps designed by industry experts.</p>
-                </div>
-              </div>
+            <div className="relative z-10">
+              <h2 className="text-3xl font-bold mb-4">Your Roadmap to Success</h2>
+              <p className="mb-8 text-primary-foreground/90 leading-relaxed">
+                DevPathways provides structured learning paths for developers at all levels. Track your progress and grow your skills with expert-designed roadmaps.
+              </p>
               
-              <div className="flex items-start">
-                <Clock className="h-6 w-6 mr-3 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold">Track Your Progress</h3>
-                  <p className="text-primary-foreground/80">Monitor your learning journey and stay motivated.</p>
+              <div className="space-y-6">
+                <div className="flex items-start bg-primary/20 p-4 rounded-lg">
+                  <BookOpen className="h-6 w-6 mr-3 mt-0.5 text-white" />
+                  <div>
+                    <h3 className="font-semibold">Structured Learning Paths</h3>
+                    <p className="text-primary-foreground/80">Follow roadmaps designed by industry experts.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start bg-primary/20 p-4 rounded-lg">
+                  <Clock className="h-6 w-6 mr-3 mt-0.5 text-white" />
+                  <div>
+                    <h3 className="font-semibold">Track Your Progress</h3>
+                    <p className="text-primary-foreground/80">Monitor your learning journey and stay motivated.</p>
+                  </div>
                 </div>
               </div>
             </div>

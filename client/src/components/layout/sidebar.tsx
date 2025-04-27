@@ -73,9 +73,9 @@ export function Sidebar({ className }: SidebarProps) {
   ];
 
   return (
-    <div className={cn("pb-12 w-60 border-r border-border", className)}>
-      <div className="py-4 px-4 flex items-center border-b border-border">
-        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm font-medium text-primary-foreground mr-2">
+    <div className={cn("pb-12 w-64 min-w-64 bg-card border-r border-border", className)}>
+      <div className="py-6 px-5 flex items-center border-b border-border">
+        <div className="w-10 h-10 rounded-md bg-primary flex items-center justify-center text-sm font-medium text-primary-foreground mr-3">
           {user?.username.substring(0, 2).toUpperCase()}
         </div>
         <div className="space-y-1">
@@ -85,14 +85,22 @@ export function Sidebar({ className }: SidebarProps) {
           </p>
         </div>
       </div>
-      <ScrollArea className="h-[calc(100vh-80px)]">
-        <div className="px-3 py-2">
+      <ScrollArea className="h-[calc(100vh-100px)]">
+        <div className="px-3 py-4">
+          <h3 className="mb-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Main Navigation
+          </h3>
           <div className="space-y-1 py-2">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href}>
                 <Button
-                  variant={item.active ? "secondary" : "ghost"}
-                  className="w-full justify-start"
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start font-normal",
+                    item.active ? 
+                      "bg-primary/10 text-primary hover:bg-primary/20" : 
+                      "text-foreground hover:bg-muted"
+                  )}
                   size="sm"
                 >
                   {item.icon}
@@ -102,11 +110,19 @@ export function Sidebar({ className }: SidebarProps) {
             ))}
           </div>
           
-          <div className="py-2">
+          <h3 className="mt-6 mb-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            User
+          </h3>
+          <div className="space-y-1 py-2">
             <Link href="/profile">
               <Button
-                variant={location === "/profile" ? "secondary" : "ghost"}
-                className="w-full justify-start"
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start font-normal",
+                  location === "/profile" ? 
+                    "bg-primary/10 text-primary hover:bg-primary/20" : 
+                    "text-foreground hover:bg-muted"
+                )}
                 size="sm"
               >
                 <UserCircle className="h-5 w-5 mr-2" />
@@ -115,8 +131,13 @@ export function Sidebar({ className }: SidebarProps) {
             </Link>
             <Link href="/settings">
               <Button
-                variant={location === "/settings" ? "secondary" : "ghost"}
-                className="w-full justify-start"
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start font-normal",
+                  location === "/settings" ? 
+                    "bg-primary/10 text-primary hover:bg-primary/20" : 
+                    "text-foreground hover:bg-muted"
+                )}
                 size="sm"
               >
                 <Settings className="h-5 w-5 mr-2" />
@@ -127,16 +148,20 @@ export function Sidebar({ className }: SidebarProps) {
           
           {isAdmin && (
             <>
-              <Separator className="my-2" />
-              <h3 className="mb-2 px-4 text-xs font-semibold text-muted-foreground">
+              <h3 className="mt-6 mb-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Administration
               </h3>
               <div className="space-y-1 py-2">
                 {adminItems.map((item) => (
                   <Link key={item.href} href={item.href}>
                     <Button
-                      variant={item.active ? "secondary" : "ghost"}
-                      className="w-full justify-start"
+                      variant="ghost"
+                      className={cn(
+                        "w-full justify-start font-normal",
+                        item.active ? 
+                          "bg-primary/10 text-primary hover:bg-primary/20" : 
+                          "text-foreground hover:bg-muted"
+                      )}
                       size="sm"
                     >
                       {item.icon}
@@ -148,11 +173,10 @@ export function Sidebar({ className }: SidebarProps) {
             </>
           )}
           
-          <Separator className="my-2" />
-          <div className="space-y-1 py-2">
+          <div className="mt-8 pt-4 border-t border-border">
             <Button
               variant="ghost"
-              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="w-full justify-start font-normal text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               size="sm"
               onClick={handleLogout}
             >
