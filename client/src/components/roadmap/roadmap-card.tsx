@@ -62,7 +62,7 @@ export function RoadmapCard({ roadmap, progress = 0 }: RoadmapCardProps) {
 
   return (
     <div 
-      className="bg-card rounded-lg overflow-hidden border border-border transition-all duration-200 hover:shadow-lg hover:border-primary hover:translate-y-[-4px]"
+      className="bg-card rounded-lg overflow-hidden border border-border transition-all duration-200 hover:shadow-lg hover:border-primary/50 hover:translate-y-[-2px]"
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
@@ -79,17 +79,17 @@ export function RoadmapCard({ roadmap, progress = 0 }: RoadmapCardProps) {
           </Button>
         </div>
         
-        <p className="text-muted-foreground text-sm mb-4">{roadmap.description}</p>
+        <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{roadmap.description}</p>
         
         <div className="flex items-center gap-4 text-sm mb-5">
           <div className="flex items-center">
-            <Clock className="h-4 w-4 text-muted-foreground mr-1" />
+            <Clock className="h-4 w-4 text-primary/70 mr-1" />
             <span className="text-muted-foreground">{roadmap.estimatedTime}</span>
           </div>
           
           <div className="flex items-center">
-            <Zap className="h-4 w-4 text-muted-foreground mr-1" />
-            <span className="text-muted-foreground">{roadmap.difficulty}</span>
+            <Zap className="h-4 w-4 text-primary/70 mr-1" />
+            <span className="text-muted-foreground capitalize">{roadmap.difficulty}</span>
           </div>
         </div>
         
@@ -98,13 +98,13 @@ export function RoadmapCard({ roadmap, progress = 0 }: RoadmapCardProps) {
             <span>Progress</span>
             <span>{progress}%</span>
           </div>
-          <Progress value={progress} className="h-2" />
+          <Progress value={progress} className="h-2 bg-muted" />
         </div>
         
         <Link href={`/roadmap/${roadmap.id}`}>
           <Button 
-            variant={isHovering ? "default" : "secondary"} 
-            className="w-full py-2 text-sm"
+            variant={isHovering ? "default" : "outline"} 
+            className={`w-full py-2 text-sm ${isHovering ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}
           >
             {progress > 0 ? "Continue Learning" : "Start Learning"}
           </Button>

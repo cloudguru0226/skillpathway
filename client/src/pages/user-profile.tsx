@@ -27,7 +27,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { BookMarked, Clock, Calendar, Award } from "lucide-react";
 
-export default function UserProfile() {
+export default function UserProfile({ params }: { params?: any }) {
   const [activeTab, setActiveTab] = useState("profile");
   const { user } = useAuth();
   const { toast } = useToast();
@@ -109,7 +109,11 @@ export default function UserProfile() {
   }
   
   if (!user) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <p className="text-muted-foreground">Loading profile...</p>
+      </div>
+    );
   }
   
   // Calculate user stats
