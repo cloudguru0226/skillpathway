@@ -14,6 +14,7 @@ interface RoadmapSectionProps {
   completed?: boolean;
   inProgress?: boolean;
   onNodeClick?: (nodeTitle: string) => void;
+  selectedNodeIndex?: number | null;
 }
 
 export function RoadmapSection({
@@ -22,7 +23,8 @@ export function RoadmapSection({
   nodes,
   completed = false,
   inProgress = false,
-  onNodeClick
+  onNodeClick,
+  selectedNodeIndex
 }: RoadmapSectionProps) {
   let status;
 
@@ -54,6 +56,7 @@ export function RoadmapSection({
             inProgress={node.inProgress}
             hasConnector={index < nodes.length - 1}
             onClick={() => onNodeClick && onNodeClick(node.title)}
+            isSelected={selectedNodeIndex === index}
           />
         ))}
       </div>

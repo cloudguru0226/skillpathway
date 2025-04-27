@@ -6,7 +6,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Roadmap } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, BookOpen, MessageSquare, FileText, Users } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ResourceList } from "@/components/resources/resource-list";
+import { NodeDetails } from "./node-details";
+import { CommentSection } from "@/components/community/comment-section";
+import { DiscussionForum } from "@/components/community/discussion-forum";
 
 // Define the structure of the roadmap content
 interface RoadmapNode {
@@ -47,6 +52,8 @@ interface RoadmapDetailProps {
 export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   const { toast } = useToast();
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [selectedNodeIndex, setSelectedNodeIndex] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState("content");
   
   // Fetch roadmap details
   const { data: roadmap, isLoading: isLoadingRoadmap } = useQuery<RoadmapWithContent>({
@@ -114,24 +121,65 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
     },
   });
 
+  // Record node completion action (will also trigger experience rewards)
+  const recordNodeActionMutation = useMutation({
+    mutationFn: async ({ nodeId, action }: { nodeId: string, action: 'complete' | 'incomplete' }) => {
+      return await apiRequest(
+        "POST", 
+        `/api/roadmaps/${roadmapId}/progress/${nodeId}/${action}`, 
+        {}
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/progress?roadmapId=${roadmapId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      
+      toast({
+        title: "Progress updated",
+        description: "Your learning progress has been updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update progress: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handle node click to toggle completion status
   const handleNodeClick = (sectionIndex: number, nodeIndex: number) => {
     if (!roadmap || !roadmap.content) return;
     
+    // Select the node for detailed view
+    setSelectedNodeIndex(nodeIndex);
+    
     // Deep clone the roadmap content
     const updatedContent = JSON.parse(JSON.stringify(roadmap.content));
     const node = updatedContent.sections[sectionIndex].nodes[nodeIndex];
+    const nodeId = encodeURIComponent(node.title); // Use title as node ID
     
     // Toggle node status
+    let action: 'complete' | 'incomplete';
     if (node.completed) {
       node.completed = false;
       node.inProgress = false;
+      action = 'incomplete';
     } else if (node.inProgress) {
       node.completed = true;
       node.inProgress = false;
+      action = 'complete';
     } else {
       node.inProgress = true;
+      action = 'incomplete';
     }
+    
+    // Record the action for XP rewards and progress tracking
+    recordNodeActionMutation.mutate({
+      nodeId,
+      action: node.completed ? 'complete' : 'incomplete'
+    });
     
     // Update section status
     const section = updatedContent.sections[sectionIndex];
@@ -166,6 +214,7 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
     if (!roadmap || !roadmap.content) return;
     if (currentSectionIndex < roadmap.content.sections.length - 1) {
       setCurrentSectionIndex(currentSectionIndex + 1);
+      setSelectedNodeIndex(null);
       window.scrollTo(0, 0);
     }
   };
@@ -174,9 +223,14 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   const handlePrevSection = () => {
     if (currentSectionIndex > 0) {
       setCurrentSectionIndex(currentSectionIndex - 1);
+      setSelectedNodeIndex(null);
       window.scrollTo(0, 0);
     }
   };
+
+  // Get the currently selected node details
+  const selectedNode = selectedNodeIndex !== null && roadmap ? 
+    roadmap.content.sections[currentSectionIndex]?.nodes[selectedNodeIndex] : null;
 
   if (isLoading) {
     return (
@@ -223,36 +277,125 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
           </div>
         </div>
         
-        {/* Roadmap Content  */}
-        <div className="space-y-6 mt-8">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold mb-2">Current Section: {roadmap.content.sections[currentSectionIndex]?.title}</h3>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-muted-foreground">Overall Progress</span>
-              <div className="w-40">
-                <Progress value={progressPercentage} className="h-2 bg-muted" />
-              </div>
-              <span className="text-sm font-semibold">{progressPercentage}%</span>
-            </div>
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+          <TabsList className="grid grid-cols-4 mb-8">
+            <TabsTrigger value="content" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              <span>Content</span>
+            </TabsTrigger>
+            <TabsTrigger value="resources" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span>Resources</span>
+            </TabsTrigger>
+            <TabsTrigger value="comments" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <span>Comments</span>
+            </TabsTrigger>
+            <TabsTrigger value="discussions" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span>Discussions</span>
+            </TabsTrigger>
+          </TabsList>
           
-          <RoadmapSection
-            key={roadmap.content.sections[currentSectionIndex]?.title}
-            title={roadmap.content.sections[currentSectionIndex]?.title}
-            description={roadmap.content.sections[currentSectionIndex]?.description}
-            nodes={roadmap.content.sections[currentSectionIndex]?.nodes}
-            completed={roadmap.content.sections[currentSectionIndex]?.completed}
-            inProgress={roadmap.content.sections[currentSectionIndex]?.inProgress}
-            onNodeClick={(nodeTitle) => {
-              const nodeIndex = roadmap.content.sections[currentSectionIndex]?.nodes.findIndex(
-                (n: any) => n.title === nodeTitle
-              );
-              if (nodeIndex !== -1) {
-                handleNodeClick(currentSectionIndex, nodeIndex);
-              }
-            }}
-          />
-        </div>
+          <TabsContent value="content" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold mb-2">Current Section: {roadmap.content.sections[currentSectionIndex]?.title}</h3>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-muted-foreground">Overall Progress</span>
+                <div className="w-40">
+                  <Progress value={progressPercentage} className="h-2 bg-muted" />
+                </div>
+                <span className="text-sm font-semibold">{progressPercentage}%</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <RoadmapSection
+                  key={roadmap.content.sections[currentSectionIndex]?.title}
+                  title={roadmap.content.sections[currentSectionIndex]?.title}
+                  description={roadmap.content.sections[currentSectionIndex]?.description}
+                  nodes={roadmap.content.sections[currentSectionIndex]?.nodes}
+                  completed={roadmap.content.sections[currentSectionIndex]?.completed}
+                  inProgress={roadmap.content.sections[currentSectionIndex]?.inProgress}
+                  onNodeClick={(nodeTitle) => {
+                    const nodeIndex = roadmap.content.sections[currentSectionIndex]?.nodes.findIndex(
+                      (n: any) => n.title === nodeTitle
+                    );
+                    if (nodeIndex !== -1) {
+                      handleNodeClick(currentSectionIndex, nodeIndex);
+                    }
+                  }}
+                  selectedNodeIndex={selectedNodeIndex}
+                />
+              </div>
+              
+              {selectedNode && (
+                <div className="bg-card rounded-lg p-4 border border-border">
+                  <NodeDetails 
+                    node={selectedNode} 
+                    sectionTitle={roadmap.content.sections[currentSectionIndex]?.title || ''} 
+                    roadmapId={parseInt(roadmapId)}
+                    roadmapTitle={roadmap.title}
+                    nodeId={encodeURIComponent(selectedNode.title)}
+                  />
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="resources">
+            <div className="bg-card rounded-lg p-5 border border-border">
+              <h3 className="text-lg font-bold mb-4">Learning Resources</h3>
+              {selectedNode ? (
+                <ResourceList 
+                  roadmapId={parseInt(roadmapId)} 
+                  nodeId={encodeURIComponent(selectedNode.title)}
+                  nodeTitle={selectedNode.title}
+                />
+              ) : (
+                <div className="text-center p-8 text-muted-foreground">
+                  <p>Select a node from the roadmap to view its resources.</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="comments">
+            <div className="bg-card rounded-lg p-5 border border-border">
+              <h3 className="text-lg font-bold mb-4">Comments</h3>
+              {selectedNode ? (
+                <CommentSection 
+                  roadmapId={parseInt(roadmapId)} 
+                  nodeId={encodeURIComponent(selectedNode.title)}
+                  nodeTitle={selectedNode.title}
+                />
+              ) : (
+                <div className="text-center p-8 text-muted-foreground">
+                  <p>Select a node from the roadmap to view comments.</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="discussions">
+            <div className="bg-card rounded-lg p-5 border border-border">
+              <h3 className="text-lg font-bold mb-4">Discussions</h3>
+              {selectedNode ? (
+                <DiscussionForum 
+                  roadmapId={parseInt(roadmapId)} 
+                  nodeId={encodeURIComponent(selectedNode.title)}
+                  nodeTitle={selectedNode.title}
+                />
+              ) : (
+                <DiscussionForum 
+                  roadmapId={parseInt(roadmapId)}
+                  roadmapTitle={roadmap.title} 
+                />
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
       
       <div className="p-5 border-t border-border">

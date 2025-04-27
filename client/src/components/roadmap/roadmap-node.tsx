@@ -6,6 +6,7 @@ interface RoadmapNodeProps {
   inProgress?: boolean;
   hasConnector?: boolean;
   onClick?: () => void;
+  isSelected?: boolean;
 }
 
 export function RoadmapNode({ 
@@ -13,11 +14,12 @@ export function RoadmapNode({
   completed = false, 
   inProgress = false,
   hasConnector = false,
-  onClick
+  onClick,
+  isSelected = false
 }: RoadmapNodeProps) {
   let icon;
   let className = "relative p-3 rounded-md mb-2.5 transition-all duration-200 hover:shadow-md cursor-pointer ";
-
+  
   if (completed) {
     className += "bg-green-500/10 border border-green-500/30";
     icon = <CheckCircle className="h-5 w-5 text-green-500 mr-2" />;
@@ -27,6 +29,11 @@ export function RoadmapNode({
   } else {
     className += "bg-muted border border-border";
     icon = <Circle className="h-5 w-5 text-muted-foreground mr-2" />;
+  }
+  
+  // Add selected styling
+  if (isSelected) {
+    className += " outline outline-2 outline-primary shadow-md";
   }
 
   return (
