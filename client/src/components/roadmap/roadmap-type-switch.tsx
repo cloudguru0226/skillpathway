@@ -15,21 +15,25 @@ export function RoadmapTypeSwitch({ onChange, initialType = "role" }: RoadmapTyp
   };
 
   return (
-    <div className="flex justify-center mb-8">
-      <div className="bg-muted rounded-lg p-1 inline-flex">
+    <div className="flex mb-4">
+      <div className="bg-card rounded-lg p-1 inline-flex">
         <Button
-          variant={activeType === "role" ? "default" : "ghost"}
+          variant="ghost"
           className={`px-5 py-2 rounded-md text-sm font-medium ${
-            activeType === "role" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-card"
+            activeType === "role" 
+              ? "bg-primary text-primary-foreground" 
+              : "text-foreground hover:bg-muted"
           }`}
           onClick={() => handleTypeChange("role")}
         >
           Role Based
         </Button>
         <Button
-          variant={activeType === "skill" ? "default" : "ghost"}
+          variant="ghost"
           className={`px-5 py-2 rounded-md text-sm font-medium ${
-            activeType === "skill" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-card"
+            activeType === "skill" 
+              ? "bg-primary text-primary-foreground" 
+              : "text-foreground hover:bg-muted"
           }`}
           onClick={() => handleTypeChange("skill")}
         >

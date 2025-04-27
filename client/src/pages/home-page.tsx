@@ -39,7 +39,7 @@ export default function HomePage() {
       <Header />
       
       <main className="flex-grow container mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-6">
           <RoadmapTypeSwitch 
             onChange={setRoadmapType} 
             initialType={roadmapType}
@@ -49,7 +49,7 @@ export default function HomePage() {
             variant="outline" 
             size="sm" 
             onClick={handleManualSeed}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-card text-foreground hover:bg-muted"
           >
             <RefreshCw className="h-4 w-4" />
             Seed Roadmaps
@@ -58,24 +58,48 @@ export default function HomePage() {
         
         {/* Role-Based Roadmaps */}
         {roadmapType === "role" && (
-          <RoadmapGrid 
-            title="Role-Based Roadmaps" 
-            type="role"
-          />
+          <div className="mb-12">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Role-Based Roadmaps</h2>
+              <Button 
+                variant="link" 
+                className="text-primary hover:text-primary/80"
+              >
+                View All
+              </Button>
+            </div>
+            <RoadmapGrid 
+              title="" 
+              type="role"
+              showViewAll={false}
+            />
+          </div>
         )}
         
         {/* Skill-Based Roadmaps */}
         {roadmapType === "skill" && (
-          <RoadmapGrid 
-            title="Skill-Based Roadmaps" 
-            type="skill"
-          />
+          <div className="mb-12">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Skill-Based Roadmaps</h2>
+              <Button 
+                variant="link" 
+                className="text-primary hover:text-primary/80"
+              >
+                View All
+              </Button>
+            </div>
+            <RoadmapGrid 
+              title="" 
+              type="skill"
+              showViewAll={false}
+            />
+          </div>
         )}
         
         {/* Continue Learning Section */}
-        <div className="mb-8">
+        <div className="mb-12">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Continue Learning</h2>
+            <h2 className="text-xl font-bold">Continue Learning</h2>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -84,28 +108,58 @@ export default function HomePage() {
             
             {/* Learning stats */}
             <div className="space-y-6">
-              <ProgressStats />
-              <ActivityChart />
+              <div className="bg-card rounded-lg p-5">
+                <h3 className="text-lg font-bold mb-4">Your Learning Stats</h3>
+                <ProgressStats />
+              </div>
+              <div className="bg-card rounded-lg p-5">
+                <h3 className="text-lg font-bold mb-4">Weekly Activity</h3>
+                <ActivityChart />
+              </div>
             </div>
           </div>
         </div>
         
         {/* Popular Skill-Based Roadmaps */}
         {roadmapType === "role" && (
-          <RoadmapGrid 
-            title="Popular Skill-Based Roadmaps" 
-            type="skill"
-            limit={4}
-          />
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Popular Skill-Based Roadmaps</h2>
+              <Button 
+                variant="link" 
+                className="text-primary hover:text-primary/80"
+              >
+                View All
+              </Button>
+            </div>
+            <RoadmapGrid 
+              title="" 
+              type="skill"
+              limit={4}
+              showViewAll={false}
+            />
+          </div>
         )}
         
         {/* Popular Role-Based Roadmaps */}
         {roadmapType === "skill" && (
-          <RoadmapGrid 
-            title="Popular Role-Based Roadmaps" 
-            type="role"
-            limit={3}
-          />
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Popular Role-Based Roadmaps</h2>
+              <Button 
+                variant="link" 
+                className="text-primary hover:text-primary/80"
+              >
+                View All
+              </Button>
+            </div>
+            <RoadmapGrid 
+              title="" 
+              type="role"
+              limit={3}
+              showViewAll={false}
+            />
+          </div>
         )}
       </main>
     </div>

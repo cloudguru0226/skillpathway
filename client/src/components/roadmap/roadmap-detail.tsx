@@ -195,104 +195,63 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   }
 
   return (
-    <div className="bg-card rounded-lg w-full overflow-hidden flex flex-col mx-auto">
+    <div className="bg-background rounded-lg w-full overflow-hidden flex flex-col mx-auto">
       <div className="p-5 border-b border-border flex justify-between items-center">
         <h2 className="text-xl font-bold">{roadmap.title}</h2>
         <div className="flex items-center space-x-2">
           <span className="text-sm text-muted-foreground">Progress:</span>
           <div className="w-48 flex items-center gap-2">
-            <Progress value={progressPercentage} className="h-2" />
+            <Progress value={progressPercentage} className="h-2 bg-muted" />
             <span className="text-sm font-semibold">{progressPercentage}%</span>
           </div>
         </div>
       </div>
       
       <div className="p-5 overflow-y-auto flex-grow">
-        {/* Related Roadmaps and Header Area - similar to PDF */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="md:col-span-1 space-y-4">
-            <div className="bg-muted p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2">Related Roadmaps</h3>
-              <ul className="space-y-2">
-                {roadmap.title === "Frontend Developer" && (
-                  <>
-                    <li className="text-foreground hover:text-primary cursor-pointer">Backend Roadmap</li>
-                    <li className="text-foreground hover:text-primary cursor-pointer">Full Stack Roadmap</li>
-                    <li className="text-foreground hover:text-primary cursor-pointer">React</li>
-                  </>
-                )}
-                {roadmap.title === "Backend Developer" && (
-                  <>
-                    <li className="text-foreground hover:text-primary cursor-pointer">Frontend Roadmap</li>
-                    <li className="text-foreground hover:text-primary cursor-pointer">DevOps Roadmap</li>
-                    <li className="text-foreground hover:text-primary cursor-pointer">PostgreSQL</li>
-                  </>
-                )}
-                {roadmap.title === "AWS" && (
-                  <>
-                    <li className="text-foreground hover:text-primary cursor-pointer">Backend Roadmap</li>
-                    <li className="text-foreground hover:text-primary cursor-pointer">DevOps Roadmap</li>
-                  </>
-                )}
-              </ul>
-            </div>
-            
-            <div className="bg-muted border border-border p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2">Note</h3>
-              <p className="text-muted-foreground text-sm">
-                This roadmap provides an opinionated list of topics to help you get started. 
-                You don't need to learn everything at once. Focus on what's relevant to your goals.
-              </p>
-            </div>
+        <div className="mb-6">
+          <p className="text-muted-foreground">{roadmap.description}</p>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 my-4">
+          <div className="bg-card p-4 rounded-lg">
+            <h4 className="font-semibold mb-1 text-sm text-muted-foreground">Difficulty</h4>
+            <p className="text-foreground capitalize">{roadmap.difficulty}</p>
           </div>
-          
-          <div className="md:col-span-2">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">Introduction</h3>
-              <p className="text-muted-foreground">{roadmap.description}</p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 my-4">
-              <div className="bg-muted p-4 rounded-lg">
-                <h4 className="font-semibold mb-1">Difficulty</h4>
-                <p className="text-muted-foreground capitalize">{roadmap.difficulty}</p>
-              </div>
-              <div className="bg-muted p-4 rounded-lg">
-                <h4 className="font-semibold mb-1">Estimated Time</h4>
-                <p className="text-muted-foreground">{roadmap.estimatedTime}</p>
-              </div>
-            </div>
+          <div className="bg-card p-4 rounded-lg">
+            <h4 className="font-semibold mb-1 text-sm text-muted-foreground">Estimated Time</h4>
+            <p className="text-foreground">{roadmap.estimatedTime}</p>
           </div>
         </div>
         
-        {/* Roadmap Content in PDF-like format */}
-        <div className="space-y-6">
-          {/* Group sections into steps */}
-          {roadmap.content.sections.map((section: any, sectionIndex: number) => (
-            <RoadmapSection
-              key={section.title}
-              title={section.title}
-              description={section.description}
-              nodes={section.nodes}
-              completed={section.completed}
-              inProgress={section.inProgress}
-              onNodeClick={(nodeTitle) => {
-                const nodeIndex = section.nodes.findIndex((n: any) => n.title === nodeTitle);
-                if (nodeIndex !== -1) {
-                  handleNodeClick(sectionIndex, nodeIndex);
-                }
-              }}
-            />
-          ))}
-          
-          {/* Best practices box at the bottom - similar to PDF */}
-          <div className="bg-muted p-4 rounded-lg border border-border mt-6">
-            <h3 className="text-lg font-semibold mb-2">Best way to learn?</h3>
-            <p className="text-muted-foreground">
-              Make a simple project and apply the concepts as you learn them. 
-              Practical experience is the best way to reinforce your knowledge.
-            </p>
+        {/* Roadmap Content  */}
+        <div className="space-y-6 mt-8">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold mb-2">Current Section: {roadmap.content.sections[currentSectionIndex]?.title}</h3>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-muted-foreground">Overall Progress</span>
+              <div className="w-40">
+                <Progress value={progressPercentage} className="h-2 bg-muted" />
+              </div>
+              <span className="text-sm font-semibold">{progressPercentage}%</span>
+            </div>
           </div>
+          
+          <RoadmapSection
+            key={roadmap.content.sections[currentSectionIndex]?.title}
+            title={roadmap.content.sections[currentSectionIndex]?.title}
+            description={roadmap.content.sections[currentSectionIndex]?.description}
+            nodes={roadmap.content.sections[currentSectionIndex]?.nodes}
+            completed={roadmap.content.sections[currentSectionIndex]?.completed}
+            inProgress={roadmap.content.sections[currentSectionIndex]?.inProgress}
+            onNodeClick={(nodeTitle) => {
+              const nodeIndex = roadmap.content.sections[currentSectionIndex]?.nodes.findIndex(
+                (n: any) => n.title === nodeTitle
+              );
+              if (nodeIndex !== -1) {
+                handleNodeClick(currentSectionIndex, nodeIndex);
+              }
+            }}
+          />
         </div>
       </div>
       
@@ -301,15 +260,27 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
           <Button
             variant="outline"
             onClick={() => window.history.back()}
+            className="bg-secondary text-secondary-foreground"
           >
             Back to Roadmaps
           </Button>
-          <Button
-            onClick={() => {}} // This could be a link to start learning resources
-            variant="default"
-          >
-            Start Learning
-          </Button>
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              onClick={handlePrevSection}
+              disabled={currentSectionIndex === 0}
+              className="bg-secondary text-secondary-foreground"
+            >
+              Previous Section
+            </Button>
+            <Button
+              onClick={handleNextSection}
+              disabled={currentSectionIndex === roadmap.content.sections.length - 1}
+              className="bg-primary text-primary-foreground"
+            >
+              Next Section
+            </Button>
+          </div>
         </div>
       </div>
     </div>

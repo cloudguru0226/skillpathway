@@ -27,15 +27,15 @@ export function RoadmapSection({
   let status;
 
   if (completed) {
-    status = <Badge className="bg-green-500/20 text-green-500 px-2 py-1 rounded">Completed</Badge>;
+    status = <span className="bg-green-500/20 text-green-500 px-2 py-1 rounded text-xs">Completed</span>;
   } else if (inProgress) {
-    status = <Badge className="bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded">In Progress</Badge>;
+    status = <span className="bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded text-xs">In Progress</span>;
   } else {
-    status = <Badge className="bg-muted/50 text-muted-foreground px-2 py-1 rounded">Not Started</Badge>;
+    status = <span className="bg-muted/50 text-muted-foreground px-2 py-1 rounded text-xs">Not Started</span>;
   }
 
   return (
-    <div className="bg-muted rounded-lg p-4 mb-8">
+    <div className="bg-card rounded-lg p-4 mb-8">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-md font-semibold">{title}</h3>
         {status}
@@ -45,7 +45,7 @@ export function RoadmapSection({
         <p className="text-sm text-muted-foreground mb-4">{description}</p>
       )}
       
-      <div className="space-y-1 ml-1">
+      <div className="space-y-3 ml-1">
         {nodes.map((node, index) => (
           <RoadmapNode
             key={node.title}
