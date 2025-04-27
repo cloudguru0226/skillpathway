@@ -10,7 +10,14 @@ import {
   badges, type Badge, type InsertBadge,
   userBadges, type UserBadge, type InsertUserBadge,
   userSkills, type UserSkill, type InsertUserSkill,
-  experienceTransactions, type ExperienceTransaction, type InsertExperienceTransaction
+  experienceTransactions, type ExperienceTransaction, type InsertExperienceTransaction,
+  comments, type Comment, type InsertComment,
+  commentReactions, type CommentReaction, type InsertCommentReaction,
+  resources, type Resource, type InsertResource,
+  roadmapNodeResources, type RoadmapNodeResource, type InsertRoadmapNodeResource,
+  discussionTopics, type DiscussionTopic, type InsertDiscussionTopic,
+  discussionReplies, type DiscussionReply, type InsertDiscussionReply,
+  blogPosts, type BlogPost, type InsertBlogPost
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -84,6 +91,57 @@ export interface IStorage {
   getExperienceTransactions(userId: number, limit?: number): Promise<ExperienceTransaction[]>;
   createExperienceTransaction(transaction: InsertExperienceTransaction): Promise<ExperienceTransaction>;
 
+  // Comment methods
+  getComments(roadmapId?: number, nodeId?: string): Promise<Comment[]>;
+  getCommentById(id: number): Promise<Comment | undefined>;
+  createComment(comment: InsertComment): Promise<Comment>;
+  updateComment(id: number, content: string): Promise<Comment | undefined>;
+  deleteComment(id: number): Promise<boolean>;
+  getCommentReplies(parentId: number): Promise<Comment[]>;
+
+  // Comment Reaction methods
+  getCommentReactions(commentId: number): Promise<CommentReaction[]>;
+  addCommentReaction(reaction: InsertCommentReaction): Promise<CommentReaction>;
+  removeCommentReaction(userId: number, commentId: number, reaction: string): Promise<boolean>;
+
+  // Resource methods
+  getResources(type?: string): Promise<Resource[]>;
+  getResourceById(id: number): Promise<Resource | undefined>;
+  createResource(resource: InsertResource): Promise<Resource>;
+  updateResource(id: number, resource: Partial<Resource>): Promise<Resource | undefined>;
+  deleteResource(id: number): Promise<boolean>;
+
+  // Roadmap Node Resource methods
+  getRoadmapNodeResources(roadmapId: number, nodeId: string): Promise<(RoadmapNodeResource & { resource: Resource })[]>;
+  addResourceToNode(nodeResource: InsertRoadmapNodeResource): Promise<RoadmapNodeResource>;
+  removeResourceFromNode(roadmapId: number, nodeId: string, resourceId: number): Promise<boolean>;
+  reorderNodeResources(roadmapId: number, nodeId: string, resourceIds: number[]): Promise<RoadmapNodeResource[]>;
+
+  // Discussion Topic methods
+  getDiscussionTopics(roadmapId?: number, nodeId?: string): Promise<DiscussionTopic[]>;
+  getDiscussionTopicById(id: number): Promise<DiscussionTopic | undefined>;
+  createDiscussionTopic(topic: InsertDiscussionTopic): Promise<DiscussionTopic>;
+  updateDiscussionTopic(id: number, topic: Partial<DiscussionTopic>): Promise<DiscussionTopic | undefined>;
+  deleteDiscussionTopic(id: number): Promise<boolean>;
+  incrementTopicViewCount(id: number): Promise<DiscussionTopic | undefined>;
+
+  // Discussion Reply methods
+  getDiscussionReplies(topicId: number): Promise<DiscussionReply[]>;
+  getDiscussionReplyById(id: number): Promise<DiscussionReply | undefined>;
+  createDiscussionReply(reply: InsertDiscussionReply): Promise<DiscussionReply>;
+  updateDiscussionReply(id: number, content: string): Promise<DiscussionReply | undefined>;
+  deleteDiscussionReply(id: number): Promise<boolean>;
+  markReplyAsAccepted(id: number): Promise<DiscussionReply | undefined>;
+
+  // Blog Post methods
+  getBlogPosts(status?: string, tag?: string): Promise<BlogPost[]>;
+  getBlogPostById(id: number): Promise<BlogPost | undefined>;
+  getBlogPostBySlug(slug: string): Promise<BlogPost | undefined>;
+  createBlogPost(post: InsertBlogPost): Promise<BlogPost>;
+  updateBlogPost(id: number, post: Partial<BlogPost>): Promise<BlogPost | undefined>;
+  deleteBlogPost(id: number): Promise<boolean>;
+  incrementBlogPostViewCount(id: number): Promise<BlogPost | undefined>;
+
   // Session store
   sessionStore: session.Store;
 }
@@ -101,6 +159,14 @@ export class MemStorage implements IStorage {
   private userBadges: Map<string, UserBadge & { badge: Badge }>;
   private userSkills: Map<string, UserSkill>;
   private experienceTransactions: ExperienceTransaction[];
+  private comments: Map<number, Comment>;
+  private commentReactions: Map<string, CommentReaction>;
+  private resources: Map<number, Resource>;
+  private roadmapNodeResources: Map<string, RoadmapNodeResource>;
+  private discussionTopics: Map<number, DiscussionTopic>;
+  private discussionReplies: Map<number, DiscussionReply>;
+  private blogPosts: Map<number, BlogPost>;
+  private blogPostsBySlug: Map<string, number>;
   
   // IDs for records
   private userCounter: number;
@@ -115,6 +181,13 @@ export class MemStorage implements IStorage {
   private userBadgeCounter: number;
   private userSkillCounter: number;
   private experienceTransactionCounter: number;
+  private commentCounter: number;
+  private commentReactionCounter: number;
+  private resourceCounter: number;
+  private roadmapNodeResourceCounter: number;
+  private discussionTopicCounter: number;
+  private discussionReplyCounter: number;
+  private blogPostCounter: number;
   
   sessionStore: session.Store;
 
@@ -131,6 +204,14 @@ export class MemStorage implements IStorage {
     this.userBadges = new Map();
     this.userSkills = new Map();
     this.experienceTransactions = [];
+    this.comments = new Map();
+    this.commentReactions = new Map();
+    this.resources = new Map();
+    this.roadmapNodeResources = new Map();
+    this.discussionTopics = new Map();
+    this.discussionReplies = new Map();
+    this.blogPosts = new Map();
+    this.blogPostsBySlug = new Map();
     
     this.userCounter = 1;
     this.roadmapCounter = 1;
@@ -144,6 +225,13 @@ export class MemStorage implements IStorage {
     this.userBadgeCounter = 1;
     this.userSkillCounter = 1;
     this.experienceTransactionCounter = 1;
+    this.commentCounter = 1;
+    this.commentReactionCounter = 1;
+    this.resourceCounter = 1;
+    this.roadmapNodeResourceCounter = 1;
+    this.discussionTopicCounter = 1;
+    this.discussionReplyCounter = 1;
+    this.blogPostCounter = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h

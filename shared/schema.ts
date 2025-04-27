@@ -248,3 +248,180 @@ export const insertExperienceTransactionSchema = createInsertSchema(experienceTr
 
 export type InsertExperienceTransaction = z.infer<typeof insertExperienceTransactionSchema>;
 export type ExperienceTransaction = typeof experienceTransactions.$inferSelect;
+
+// Comments schema
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  roadmapId: integer("roadmap_id").references(() => roadmaps.id),
+  nodeId: text("node_id"),
+  parentId: integer("parent_id").references(() => comments.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCommentSchema = createInsertSchema(comments).pick({
+  userId: true,
+  roadmapId: true,
+  nodeId: true,
+  parentId: true,
+  content: true,
+});
+
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type Comment = typeof comments.$inferSelect;
+
+// Comment Reactions schema
+export const commentReactions = pgTable("comment_reactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  commentId: integer("comment_id").notNull().references(() => comments.id),
+  reaction: text("reaction").notNull(), // 'like', 'love', 'helpful', etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    unq: unique().on(table.userId, table.commentId, table.reaction)
+  }
+});
+
+export const insertCommentReactionSchema = createInsertSchema(commentReactions).pick({
+  userId: true,
+  commentId: true,
+  reaction: true,
+});
+
+export type InsertCommentReaction = z.infer<typeof insertCommentReactionSchema>;
+export type CommentReaction = typeof commentReactions.$inferSelect;
+
+// Resources schema
+export const resources = pgTable("resources", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // 'article', 'video', 'book', 'tutorial', etc.
+  url: text("url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertResourceSchema = createInsertSchema(resources).pick({
+  title: true,
+  description: true,
+  type: true,
+  url: true,
+  thumbnailUrl: true,
+});
+
+export type InsertResource = z.infer<typeof insertResourceSchema>;
+export type Resource = typeof resources.$inferSelect;
+
+// Roadmap Node Resources schema (for linking resources to specific nodes in a roadmap)
+export const roadmapNodeResources = pgTable("roadmap_node_resources", {
+  id: serial("id").primaryKey(),
+  roadmapId: integer("roadmap_id").notNull().references(() => roadmaps.id),
+  nodeId: text("node_id").notNull(),
+  resourceId: integer("resource_id").notNull().references(() => resources.id),
+  order: integer("order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    unq: unique().on(table.roadmapId, table.nodeId, table.resourceId)
+  }
+});
+
+export const insertRoadmapNodeResourceSchema = createInsertSchema(roadmapNodeResources).pick({
+  roadmapId: true,
+  nodeId: true,
+  resourceId: true,
+  order: true,
+});
+
+export type InsertRoadmapNodeResource = z.infer<typeof insertRoadmapNodeResourceSchema>;
+export type RoadmapNodeResource = typeof roadmapNodeResources.$inferSelect;
+
+// Discussion Topics schema
+export const discussionTopics = pgTable("discussion_topics", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  roadmapId: integer("roadmap_id").references(() => roadmaps.id),
+  nodeId: text("node_id"),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  tags: text("tags").array(),
+  viewCount: integer("view_count").default(0).notNull(),
+  isPinned: boolean("is_pinned").default(false).notNull(),
+  isClosed: boolean("is_closed").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDiscussionTopicSchema = createInsertSchema(discussionTopics).pick({
+  userId: true,
+  roadmapId: true,
+  nodeId: true,
+  title: true,
+  content: true,
+  tags: true,
+  isPinned: true,
+  isClosed: true,
+});
+
+export type InsertDiscussionTopic = z.infer<typeof insertDiscussionTopicSchema>;
+export type DiscussionTopic = typeof discussionTopics.$inferSelect;
+
+// Discussion Replies schema
+export const discussionReplies = pgTable("discussion_replies", {
+  id: serial("id").primaryKey(),
+  topicId: integer("topic_id").notNull().references(() => discussionTopics.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  isAcceptedAnswer: boolean("is_accepted_answer").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDiscussionReplySchema = createInsertSchema(discussionReplies).pick({
+  topicId: true,
+  userId: true,
+  content: true,
+  isAcceptedAnswer: true,
+});
+
+export type InsertDiscussionReply = z.infer<typeof insertDiscussionReplySchema>;
+export type DiscussionReply = typeof discussionReplies.$inferSelect;
+
+// Blog Posts schema
+export const blogPosts = pgTable("blog_posts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  content: text("content").notNull(),
+  excerpt: text("excerpt"),
+  coverImageUrl: text("cover_image_url"),
+  tags: text("tags").array(),
+  status: text("status").notNull().default("draft"), // 'draft', 'published', 'archived'
+  viewCount: integer("view_count").default(0).notNull(),
+  isPromoted: boolean("is_promoted").default(false).notNull(),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBlogPostSchema = createInsertSchema(blogPosts).pick({
+  userId: true,
+  title: true,
+  slug: true,
+  content: true,
+  excerpt: true,
+  coverImageUrl: true,
+  tags: true,
+  status: true,
+  isPromoted: true,
+  publishedAt: true,
+});
+
+export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
+export type BlogPost = typeof blogPosts.$inferSelect;
