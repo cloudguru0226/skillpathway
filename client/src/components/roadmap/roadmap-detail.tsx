@@ -481,6 +481,11 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
                   <DiscussionForm 
                     roadmapId={parseInt(roadmapId)}
                     nodeId={encodeURIComponent(selectedNode.title)}
+                    trigger={
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <Plus className="h-4 w-4" /> New Discussion
+                      </Button>
+                    }
                   />
                 )}
               </div>
