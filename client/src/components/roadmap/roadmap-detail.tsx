@@ -11,6 +11,7 @@ import {
   Loader2, BookOpen, MessageSquare, FileText, Users, 
   Plus, Book, Database 
 } from "lucide-react";
+import { CommentsSection } from "../community/comments-section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NodeDetails } from "./node-details";
 import { Badge } from "@/components/ui/badge";
@@ -459,82 +460,11 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
           
           <TabsContent value="comments">
             <div className="bg-card rounded-lg p-5 border border-border">
-              <h3 className="text-lg font-bold mb-4">Comments</h3>
               {selectedNode ? (
-                <div className="space-y-6">
-                  {comments.length > 0 ? (
-                    <div className="space-y-4">
-                      {comments.map((comment: any, index: number) => (
-                        <div key={index} className="bg-background p-4 rounded-lg border border-border">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback>
-                                {comment.user?.username?.substring(0, 2).toUpperCase() || 'U'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium text-sm">{comment.user?.username || 'User'}</span>
-                            <span className="text-xs text-muted-foreground ml-auto">
-                              {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : 'Just now'}
-                            </span>
-                          </div>
-                          <p className="text-sm">{comment.content}</p>
-                          
-                          {/* Comment reaction buttons */}
-                          <div className="flex items-center gap-3 mt-3">
-                            <button className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-                              <span>👍</span> {comment.likes || 0}
-                            </button>
-                            <button className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-                              <span>💡</span> {comment.insights || 0}
-                            </button>
-                            <button className="text-xs text-muted-foreground hover:text-foreground">
-                              Reply
-                            </button>
-                          </div>
-                          
-                          {/* Nested replies */}
-                          {comment.replies && comment.replies.length > 0 && (
-                            <div className="mt-3 pl-4 border-l border-border space-y-3">
-                              {comment.replies.map((reply: any, replyIndex: number) => (
-                                <div key={replyIndex} className="pt-3">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Avatar className="h-5 w-5">
-                                      <AvatarFallback>
-                                        {reply.user?.username?.substring(0, 2).toUpperCase() || 'U'}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="font-medium text-xs">{reply.user?.username || 'User'}</span>
-                                    <span className="text-xs text-muted-foreground ml-auto">
-                                      {reply.createdAt ? new Date(reply.createdAt).toLocaleDateString() : 'Just now'}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs ml-7">{reply.content}</p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center p-8 border border-dashed rounded-md border-border">
-                      <MessageSquare className="h-8 w-8 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">No comments yet</h3>
-                      <p className="text-muted-foreground">
-                        Be the first to share your thoughts on this topic!
-                      </p>
-                    </div>
-                  )}
-                  
-                  {/* Comment input form */}
-                  <div className="pt-4 border-t border-border">
-                    <h4 className="text-sm font-medium mb-3">Add Your Comment</h4>
-                    <CommentInput 
-                      roadmapId={parseInt(roadmapId)}
-                      nodeId={encodeURIComponent(selectedNode.title)}
-                    />
-                  </div>
-                </div>
+                <CommentsSection 
+                  roadmapId={parseInt(roadmapId)}
+                  nodeId={encodeURIComponent(selectedNode.title)}
+                />
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
                   <p>Select a node from the roadmap to view and add comments.</p>
