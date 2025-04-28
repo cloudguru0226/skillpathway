@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Roadmap } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Loader2, BookOpen, MessageSquare, FileText, Users, 
   Plus, Book, Database 
@@ -287,16 +288,47 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
 
   return (
     <div className="bg-background rounded-lg w-full overflow-hidden flex flex-col mx-auto">
-      <div className="p-5 border-b border-border flex justify-between items-center">
-        <h2 className="text-xl font-bold">{roadmap.title}</h2>
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-muted-foreground">Progress:</span>
-          <div className="w-48 flex items-center gap-2">
-            <Progress value={progressPercentage} className="h-2 bg-muted" />
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="p-5 border-b border-border flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center"
+      >
+        <motion.h2 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+          className="text-xl font-bold"
+        >
+          {roadmap.title}
+        </motion.h2>
+        
+        <div className="w-full sm:w-auto flex flex-col">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm text-muted-foreground">Progress:</span>
             <span className="text-sm font-semibold">{progressPercentage}%</span>
           </div>
+          
+          <div className="w-full sm:w-60 h-3 bg-muted rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: '0%' }}
+              animate={{ width: `${progressPercentage}%` }}
+              transition={{ 
+                delay: 0.3, 
+                duration: 1.5, 
+                ease: "easeOut" 
+              }}
+              className="h-full bg-gradient-to-r from-primary/80 to-primary rounded-full"
+            />
+          </div>
+          
+          <div className="w-full sm:w-60 flex justify-between mt-1 px-1">
+            <span className="text-xs text-muted-foreground">0%</span>
+            <span className="text-xs text-muted-foreground">50%</span>
+            <span className="text-xs text-muted-foreground">100%</span>
+          </div>
         </div>
-      </div>
+      </motion.div>
       
       <div className="p-5 overflow-y-auto flex-grow">
         <div className="mb-6">
@@ -353,15 +385,8 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
                   title={roadmap.content.sections[currentSectionIndex]?.title}
                   description={roadmap.content.sections[currentSectionIndex]?.description}
                   nodes={roadmap.content.sections[currentSectionIndex]?.nodes}
-                  completed={roadmap.content.sections[currentSectionIndex]?.completed}
-                  inProgress={roadmap.content.sections[currentSectionIndex]?.inProgress}
-                  onNodeClick={(nodeTitle) => {
-                    const nodeIndex = roadmap.content.sections[currentSectionIndex]?.nodes.findIndex(
-                      (n: any) => n.title === nodeTitle
-                    );
-                    if (nodeIndex !== -1) {
-                      handleNodeClick(currentSectionIndex, nodeIndex);
-                    }
+                  onNodeClick={(nodeIndex) => {
+                    handleNodeClick(currentSectionIndex, nodeIndex);
                   }}
                   selectedNodeIndex={selectedNodeIndex}
                 />
