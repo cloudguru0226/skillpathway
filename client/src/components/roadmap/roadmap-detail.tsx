@@ -26,6 +26,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CommentInput } from "@/components/community/comment-input";
+import { DiscussionForm } from "@/components/community/discussion-form";
 
 // Define the structure of the roadmap content
 interface RoadmapNode {
@@ -434,7 +436,7 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
             <div className="bg-card rounded-lg p-5 border border-border">
               <h3 className="text-lg font-bold mb-4">Comments</h3>
               {selectedNode ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {comments.length > 0 ? (
                     <div className="space-y-4">
                       {comments.map((comment: any, index: number) => (
@@ -446,8 +448,46 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
                               </AvatarFallback>
                             </Avatar>
                             <span className="font-medium text-sm">{comment.user?.username || 'User'}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : 'Just now'}
+                            </span>
                           </div>
                           <p className="text-sm">{comment.content}</p>
+                          
+                          {/* Comment reaction buttons */}
+                          <div className="flex items-center gap-3 mt-3">
+                            <button className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                              <span>👍</span> {comment.likes || 0}
+                            </button>
+                            <button className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                              <span>💡</span> {comment.insights || 0}
+                            </button>
+                            <button className="text-xs text-muted-foreground hover:text-foreground">
+                              Reply
+                            </button>
+                          </div>
+                          
+                          {/* Nested replies */}
+                          {comment.replies && comment.replies.length > 0 && (
+                            <div className="mt-3 pl-4 border-l border-border space-y-3">
+                              {comment.replies.map((reply: any, replyIndex: number) => (
+                                <div key={replyIndex} className="pt-3">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Avatar className="h-5 w-5">
+                                      <AvatarFallback>
+                                        {reply.user?.username?.substring(0, 2).toUpperCase() || 'U'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="font-medium text-xs">{reply.user?.username || 'User'}</span>
+                                    <span className="text-xs text-muted-foreground ml-auto">
+                                      {reply.createdAt ? new Date(reply.createdAt).toLocaleDateString() : 'Just now'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs ml-7">{reply.content}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -460,10 +500,19 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
                       </p>
                     </div>
                   )}
+                  
+                  {/* Comment input form */}
+                  <div className="pt-4 border-t border-border">
+                    <h4 className="text-sm font-medium mb-3">Add Your Comment</h4>
+                    <CommentInput 
+                      roadmapId={parseInt(roadmapId)}
+                      nodeId={encodeURIComponent(selectedNode.title)}
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
-                  <p>Select a node from the roadmap to view comments.</p>
+                  <p>Select a node from the roadmap to view and add comments.</p>
                 </div>
               )}
             </div>
@@ -471,20 +520,76 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
           
           <TabsContent value="discussions">
             <div className="bg-card rounded-lg p-5 border border-border">
-              <h3 className="text-lg font-bold mb-4">Discussions</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold">Discussions</h3>
+                {selectedNode && (
+                  <DiscussionForm 
+                    roadmapId={parseInt(roadmapId)}
+                    nodeId={encodeURIComponent(selectedNode.title)}
+                  />
+                )}
+              </div>
+              
               {selectedNode ? (
                 <div className="space-y-4">
                   {discussions.length > 0 ? (
                     <div className="space-y-4">
                       {discussions.map((discussion: any, index: number) => (
                         <div key={index} className="bg-background p-4 rounded-lg border border-border">
-                          <h4 className="font-medium mb-1">{discussion.title}</h4>
-                          <p className="text-sm text-muted-foreground mb-2">{discussion.content.substring(0, 150)}...</p>
-                          <div className="flex gap-2 mt-2">
-                            {discussion.tags?.map((tag: string, i: number) => (
-                              <Badge key={i} variant="outline">{tag}</Badge>
-                            ))}
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-medium mb-1">{discussion.title}</h4>
+                            <div className="flex items-center text-xs text-muted-foreground gap-3">
+                              <span className="flex items-center gap-1">
+                                <MessageSquare className="h-3 w-3" /> 
+                                {discussion.replyCount || 0}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Users className="h-3 w-3" /> 
+                                {discussion.viewCount || 0}
+                              </span>
+                            </div>
                           </div>
+                          
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {discussion.content.length > 150 
+                              ? `${discussion.content.substring(0, 150)}...` 
+                              : discussion.content}
+                          </p>
+                          
+                          <div className="flex flex-wrap items-center justify-between mt-2">
+                            <div className="flex flex-wrap gap-2">
+                              {discussion.tags?.map((tag: string, i: number) => (
+                                <Badge key={i} variant="outline">{tag}</Badge>
+                              ))}
+                            </div>
+                            
+                            <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                              <Avatar className="h-5 w-5">
+                                <AvatarFallback>
+                                  {discussion.user?.username?.substring(0, 2).toUpperCase() || 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs">{discussion.user?.username || 'User'}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {discussion.createdAt ? new Date(discussion.createdAt).toLocaleDateString() : 'Just now'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full mt-3 text-xs gap-1"
+                            onClick={() => {
+                              // View discussion detail - to be implemented
+                              toast({
+                                title: "Coming soon",
+                                description: "Full discussion view will be available soon",
+                              });
+                            }}
+                          >
+                            <MessageSquare className="h-3 w-3" /> View Discussion
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -492,15 +597,24 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
                     <div className="text-center p-8 border border-dashed rounded-md border-border">
                       <Users className="h-8 w-8 mx-auto text-muted-foreground mb-4" />
                       <h3 className="text-lg font-medium mb-2">No discussions yet</h3>
-                      <p className="text-muted-foreground">
+                      <p className="text-muted-foreground mb-4">
                         Be the first to start a discussion about this topic!
                       </p>
+                      <DiscussionForm 
+                        roadmapId={parseInt(roadmapId)}
+                        nodeId={encodeURIComponent(selectedNode.title)}
+                        trigger={
+                          <Button variant="outline" className="gap-1">
+                            <MessageSquare className="h-4 w-4" /> Start New Topic
+                          </Button>
+                        }
+                      />
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
-                  <p>Roadmap discussions will appear here.</p>
+                  <p>Select a node from the roadmap to view and start discussions.</p>
                 </div>
               )}
             </div>
