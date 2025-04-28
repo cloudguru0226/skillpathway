@@ -20,9 +20,11 @@ import {
   blogPosts, type BlogPost, type InsertBlogPost
 } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import { db, pool } from "./db";
+import { eq, and, desc, isNull, sql, not, gte, lt, asc } from "drizzle-orm";
+import connectPg from "connect-pg-simple";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // User methods
@@ -764,4 +766,871 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
+    });
+    
+    // Initialize default user levels
+    this.initializeDefaultUserLevels();
+  }
+
+  private async initializeDefaultUserLevels() {
+    // Check if levels already exist
+    const existingLevels = await db.select().from(userLevels);
+    if (existingLevels.length > 0) return;
+
+    // Create default user levels (1-10)
+    const defaultLevels = [
+      { level: 1, experienceRequired: 0, title: "Novice", description: "Just getting started", benefits: "Access to beginner roadmaps" },
+      { level: 2, experienceRequired: 100, title: "Apprentice", description: "Learning the basics", benefits: "Unlock skill points" },
+      { level: 3, experienceRequired: 300, title: "Journeyman", description: "Building your skills", benefits: "+1 skill point" },
+      { level: 4, experienceRequired: 600, title: "Adept", description: "Gaining confidence", benefits: "+1 skill point" },
+      { level: 5, experienceRequired: 1000, title: "Specialist", description: "Specializing in your field", benefits: "+2 skill points & intermediate roadmaps" },
+      { level: 6, experienceRequired: 1500, title: "Expert", description: "Becoming an expert", benefits: "+2 skill points" },
+      { level: 7, experienceRequired: 2100, title: "Master", description: "Mastering your craft", benefits: "+3 skill points" },
+      { level: 8, experienceRequired: 2800, title: "Virtuoso", description: "Exceptional skill and knowledge", benefits: "+3 skill points & advanced roadmaps" },
+      { level: 9, experienceRequired: 3600, title: "Luminary", description: "Guiding light in the field", benefits: "+4 skill points" },
+      { level: 10, experienceRequired: 5000, title: "Legend", description: "Legendary status achieved", benefits: "+5 skill points & all roadmaps" },
+    ];
+
+    for (const level of defaultLevels) {
+      await this.createUserLevel(level);
+    }
+  }
+
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  // Roadmap methods
+  async getRoadmap(id: number): Promise<Roadmap | undefined> {
+    const [roadmap] = await db.select().from(roadmaps).where(eq(roadmaps.id, id));
+    return roadmap;
+  }
+
+  async getRoadmaps(type?: string): Promise<Roadmap[]> {
+    if (type) {
+      return db.select().from(roadmaps).where(eq(roadmaps.type, type));
+    }
+    return db.select().from(roadmaps);
+  }
+
+  async createRoadmap(insertRoadmap: InsertRoadmap): Promise<Roadmap> {
+    const [roadmap] = await db.insert(roadmaps).values(insertRoadmap).returning();
+    return roadmap;
+  }
+
+  async updateRoadmap(id: number, roadmapData: Partial<Roadmap>): Promise<Roadmap | undefined> {
+    const [updatedRoadmap] = await db
+      .update(roadmaps)
+      .set(roadmapData)
+      .where(eq(roadmaps.id, id))
+      .returning();
+    return updatedRoadmap;
+  }
+
+  async deleteRoadmap(id: number): Promise<boolean> {
+    const result = await db.delete(roadmaps).where(eq(roadmaps.id, id));
+    return true; // In PostgreSQL with Drizzle, a successful deletion will not throw an error
+  }
+
+  // User Progress methods
+  async getUserProgress(userId: number, roadmapId?: number): Promise<UserProgress[]> {
+    if (roadmapId) {
+      return db
+        .select()
+        .from(userProgress)
+        .where(and(eq(userProgress.userId, userId), eq(userProgress.roadmapId, roadmapId)));
+    }
+    return db.select().from(userProgress).where(eq(userProgress.userId, userId));
+  }
+
+  async createUserProgress(insertProgress: InsertUserProgress): Promise<UserProgress> {
+    const [progress] = await db.insert(userProgress).values(insertProgress).returning();
+    return progress;
+  }
+
+  async updateUserProgress(userId: number, roadmapId: number, progressData: Partial<UserProgress>): Promise<UserProgress | undefined> {
+    const [updatedProgress] = await db
+      .update(userProgress)
+      .set(progressData)
+      .where(and(eq(userProgress.userId, userId), eq(userProgress.roadmapId, roadmapId)))
+      .returning();
+    return updatedProgress;
+  }
+
+  // Bookmark methods
+  async getBookmarks(userId: number): Promise<Bookmark[]> {
+    return db.select().from(bookmarks).where(eq(bookmarks.userId, userId));
+  }
+
+  async createBookmark(insertBookmark: InsertBookmark): Promise<Bookmark> {
+    const [bookmark] = await db.insert(bookmarks).values(insertBookmark).returning();
+    return bookmark;
+  }
+
+  async deleteBookmark(userId: number, roadmapId: number): Promise<boolean> {
+    await db
+      .delete(bookmarks)
+      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.roadmapId, roadmapId)));
+    return true;
+  }
+
+  async getBookmark(userId: number, roadmapId: number): Promise<Bookmark | undefined> {
+    const [bookmark] = await db
+      .select()
+      .from(bookmarks)
+      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.roadmapId, roadmapId)));
+    return bookmark;
+  }
+
+  // Activity Log methods
+  async getActivityLogs(userId: number, days?: number): Promise<ActivityLog[]> {
+    if (days) {
+      const date = new Date();
+      date.setDate(date.getDate() - days);
+      return db
+        .select()
+        .from(activityLogs)
+        .where(and(eq(activityLogs.userId, userId), gte(activityLogs.date, date)))
+        .orderBy(desc(activityLogs.date));
+    }
+    return db
+      .select()
+      .from(activityLogs)
+      .where(eq(activityLogs.userId, userId))
+      .orderBy(desc(activityLogs.date));
+  }
+
+  async createActivityLog(insertLog: InsertActivityLog): Promise<ActivityLog> {
+    const [log] = await db.insert(activityLogs).values(insertLog).returning();
+    return log;
+  }
+
+  // User Level methods
+  async getUserLevels(): Promise<UserLevel[]> {
+    return db.select().from(userLevels).orderBy(asc(userLevels.level));
+  }
+
+  async getUserLevel(level: number): Promise<UserLevel | undefined> {
+    const [userLevel] = await db.select().from(userLevels).where(eq(userLevels.level, level));
+    return userLevel;
+  }
+
+  async createUserLevel(insertLevel: InsertUserLevel): Promise<UserLevel> {
+    const [level] = await db.insert(userLevels).values(insertLevel).returning();
+    return level;
+  }
+
+  async updateUserLevel(id: number, levelData: Partial<UserLevel>): Promise<UserLevel | undefined> {
+    const [updatedLevel] = await db
+      .update(userLevels)
+      .set(levelData)
+      .where(eq(userLevels.id, id))
+      .returning();
+    return updatedLevel;
+  }
+
+  // User Experience methods
+  async getUserExperience(userId: number): Promise<UserExperience | undefined> {
+    const [experience] = await db
+      .select()
+      .from(userExperience)
+      .where(eq(userExperience.userId, userId));
+    return experience;
+  }
+
+  async createUserExperience(insertExp: InsertUserExperience): Promise<UserExperience> {
+    const [exp] = await db.insert(userExperience).values(insertExp).returning();
+    return exp;
+  }
+
+  async updateUserExperience(userId: number, expData: Partial<UserExperience>): Promise<UserExperience | undefined> {
+    const [updatedExp] = await db
+      .update(userExperience)
+      .set(expData)
+      .where(eq(userExperience.userId, userId))
+      .returning();
+    return updatedExp;
+  }
+
+  async awardExperience(userId: number, amount: number, reason: string, roadmapId?: number, nodeId?: string): Promise<UserExperience> {
+    // Get or create user experience record
+    let userExp = await this.getUserExperience(userId);
+    
+    if (!userExp) {
+      userExp = await this.createUserExperience({
+        userId,
+        currentLevel: 1,
+        totalExperience: 0,
+        skillPoints: 0
+      });
+    }
+    
+    // Create transaction record
+    await this.createExperienceTransaction({
+      userId,
+      amount,
+      reason,
+      roadmapId,
+      nodeId
+    });
+    
+    // Calculate new experience and level
+    const newTotalExp = userExp.totalExperience + amount;
+    let newLevel = userExp.currentLevel;
+    let newSkillPoints = userExp.skillPoints;
+    
+    // Check if user leveled up
+    if (newLevel < 10) { // Max level is 10
+      const nextLevel = await this.getNextLevel(userExp.currentLevel, newTotalExp);
+      
+      if (nextLevel > userExp.currentLevel) {
+        // Award skill points for leveling up
+        const skillPointsGain = await this.calculateSkillPointsGain(userExp.currentLevel, nextLevel);
+        newSkillPoints += skillPointsGain;
+        newLevel = nextLevel;
+      }
+    }
+    
+    // Update user experience
+    return this.updateUserExperience(userId, {
+      totalExperience: newTotalExp,
+      currentLevel: newLevel,
+      skillPoints: newSkillPoints
+    }) as Promise<UserExperience>;
+  }
+
+  private async getNextLevel(currentLevel: number, totalExp: number): Promise<number> {
+    // Get all levels
+    const levels = await this.getUserLevels();
+    let nextLevel = currentLevel;
+    
+    // Find the highest level the user qualifies for
+    for (const level of levels) {
+      if (totalExp >= level.experienceRequired && level.level > nextLevel) {
+        nextLevel = level.level;
+      }
+    }
+    
+    return nextLevel;
+  }
+
+  private async calculateSkillPointsGain(oldLevel: number, newLevel: number): Promise<number> {
+    let skillPoints = 0;
+    const levels = await this.getUserLevels();
+    
+    // Map levels by level number for easier lookup
+    const levelMap = new Map<number, UserLevel>();
+    for (const level of levels) {
+      levelMap.set(level.level, level);
+    }
+    
+    // Calculate skill points based on level benefits
+    for (let i = oldLevel + 1; i <= newLevel; i++) {
+      const level = levelMap.get(i);
+      if (level) {
+        const benefits = level.benefits || "";
+        
+        if (benefits.includes("+1 skill point")) {
+          skillPoints += 1;
+        } else if (benefits.includes("+2 skill points")) {
+          skillPoints += 2;
+        } else if (benefits.includes("+3 skill points")) {
+          skillPoints += 3;
+        } else if (benefits.includes("+4 skill points")) {
+          skillPoints += 4;
+        } else if (benefits.includes("+5 skill points")) {
+          skillPoints += 5;
+        }
+      }
+    }
+    
+    return skillPoints;
+  }
+
+  // Badge Category methods
+  async getBadgeCategories(): Promise<BadgeCategory[]> {
+    return db.select().from(badgeCategories);
+  }
+
+  async getBadgeCategory(id: number): Promise<BadgeCategory | undefined> {
+    const [category] = await db
+      .select()
+      .from(badgeCategories)
+      .where(eq(badgeCategories.id, id));
+    return category;
+  }
+
+  async createBadgeCategory(insertCategory: InsertBadgeCategory): Promise<BadgeCategory> {
+    const [category] = await db.insert(badgeCategories).values(insertCategory).returning();
+    return category;
+  }
+
+  // Badge methods
+  async getBadges(categoryId?: number): Promise<Badge[]> {
+    if (categoryId) {
+      return db.select().from(badges).where(eq(badges.categoryId, categoryId));
+    }
+    return db.select().from(badges);
+  }
+
+  async getBadge(id: number): Promise<Badge | undefined> {
+    const [badge] = await db.select().from(badges).where(eq(badges.id, id));
+    return badge;
+  }
+
+  async createBadge(insertBadge: InsertBadge): Promise<Badge> {
+    const [badge] = await db.insert(badges).values(insertBadge).returning();
+    return badge;
+  }
+
+  // User Badge methods
+  async getUserBadges(userId: number): Promise<(UserBadge & { badge: Badge })[]> {
+    const userBadgesWithBadgeInfo = await db
+      .select({
+        id: userBadges.id,
+        userId: userBadges.userId,
+        badgeId: userBadges.badgeId,
+        awardedAt: userBadges.awardedAt,
+        badge: badges
+      })
+      .from(userBadges)
+      .where(eq(userBadges.userId, userId))
+      .innerJoin(badges, eq(userBadges.badgeId, badges.id));
+    
+    return userBadgesWithBadgeInfo;
+  }
+
+  async awardBadge(userId: number, badgeId: number): Promise<UserBadge | undefined> {
+    // Check if user already has the badge
+    const hasBadge = await this.hasBadge(userId, badgeId);
+    if (hasBadge) return undefined;
+    
+    // Get badge to award experience
+    const badge = await this.getBadge(badgeId);
+    if (badge && badge.experienceAwarded > 0) {
+      await this.awardExperience(userId, badge.experienceAwarded, `Earned badge: ${badge.name}`);
+    }
+    
+    // Add badge to user
+    const [userBadge] = await db
+      .insert(userBadges)
+      .values({ userId, badgeId })
+      .returning();
+    
+    // Award skill points if any
+    if (badge && badge.skillPointsAwarded > 0) {
+      const userExp = await this.getUserExperience(userId);
+      if (userExp) {
+        await this.updateUserExperience(userId, {
+          skillPoints: userExp.skillPoints + badge.skillPointsAwarded
+        });
+      }
+    }
+    
+    // Get the full badge information
+    const fullBadge = await this.getBadge(badgeId);
+    
+    return userBadge ? { ...userBadge, badge: fullBadge! } : undefined;
+  }
+
+  async hasBadge(userId: number, badgeId: number): Promise<boolean> {
+    const [userBadge] = await db
+      .select()
+      .from(userBadges)
+      .where(and(eq(userBadges.userId, userId), eq(userBadges.badgeId, badgeId)));
+    return !!userBadge;
+  }
+
+  // User Skill methods
+  async getUserSkills(userId: number): Promise<UserSkill[]> {
+    return db.select().from(userSkills).where(eq(userSkills.userId, userId));
+  }
+
+  async getUserSkill(userId: number, skillName: string): Promise<UserSkill | undefined> {
+    const [skill] = await db
+      .select()
+      .from(userSkills)
+      .where(and(eq(userSkills.userId, userId), eq(userSkills.skillName, skillName)));
+    return skill;
+  }
+
+  async createUserSkill(insertSkill: InsertUserSkill): Promise<UserSkill> {
+    const [skill] = await db.insert(userSkills).values(insertSkill).returning();
+    return skill;
+  }
+
+  async updateUserSkill(userId: number, skillName: string, points: number): Promise<UserSkill | undefined> {
+    // Get existing skill
+    const existingSkill = await this.getUserSkill(userId, skillName);
+    
+    if (!existingSkill) {
+      // Create new skill if it doesn't exist
+      return this.createUserSkill({
+        userId,
+        skillName,
+        skillLevel: 1,
+        pointsInvested: points
+      });
+    }
+    
+    // Calculate new skill level
+    // Every 5 points = 1 level
+    const totalPoints = existingSkill.pointsInvested + points;
+    const newLevel = Math.floor(totalPoints / 5) + 1;
+    
+    // Update skill
+    const [updatedSkill] = await db
+      .update(userSkills)
+      .set({
+        pointsInvested: totalPoints,
+        skillLevel: newLevel
+      })
+      .where(and(eq(userSkills.userId, userId), eq(userSkills.skillName, skillName)))
+      .returning();
+    
+    return updatedSkill;
+  }
+
+  // Experience Transaction methods
+  async getExperienceTransactions(userId: number, limit?: number): Promise<ExperienceTransaction[]> {
+    let query = db
+      .select()
+      .from(experienceTransactions)
+      .where(eq(experienceTransactions.userId, userId))
+      .orderBy(desc(experienceTransactions.createdAt));
+    
+    if (limit) {
+      query = query.limit(limit);
+    }
+    
+    return query;
+  }
+
+  async createExperienceTransaction(insertTransaction: InsertExperienceTransaction): Promise<ExperienceTransaction> {
+    const [transaction] = await db
+      .insert(experienceTransactions)
+      .values(insertTransaction)
+      .returning();
+    return transaction;
+  }
+
+  // Comment methods
+  async getComments(roadmapId?: number, nodeId?: string): Promise<Comment[]> {
+    let query = db.select().from(comments);
+    
+    if (roadmapId && nodeId) {
+      query = query.where(and(
+        eq(comments.roadmapId, roadmapId),
+        eq(comments.nodeId, nodeId),
+        isNull(comments.parentId)
+      ));
+    } else if (roadmapId) {
+      query = query.where(and(
+        eq(comments.roadmapId, roadmapId),
+        isNull(comments.parentId)
+      ));
+    } else {
+      query = query.where(isNull(comments.parentId));
+    }
+    
+    return query.orderBy(desc(comments.createdAt));
+  }
+
+  async getCommentById(id: number): Promise<Comment | undefined> {
+    const [comment] = await db.select().from(comments).where(eq(comments.id, id));
+    return comment;
+  }
+
+  async createComment(insertComment: InsertComment): Promise<Comment> {
+    const [comment] = await db.insert(comments).values(insertComment).returning();
+    return comment;
+  }
+
+  async updateComment(id: number, content: string): Promise<Comment | undefined> {
+    const [updatedComment] = await db
+      .update(comments)
+      .set({ content, updatedAt: new Date() })
+      .where(eq(comments.id, id))
+      .returning();
+    return updatedComment;
+  }
+
+  async deleteComment(id: number): Promise<boolean> {
+    // First delete all reactions to this comment
+    await db.delete(commentReactions).where(eq(commentReactions.commentId, id));
+    
+    // Then delete all replies to this comment
+    await db.delete(comments).where(eq(comments.parentId, id));
+    
+    // Finally delete the comment itself
+    await db.delete(comments).where(eq(comments.id, id));
+    
+    return true;
+  }
+
+  async getCommentReplies(parentId: number): Promise<Comment[]> {
+    return db
+      .select()
+      .from(comments)
+      .where(eq(comments.parentId, parentId))
+      .orderBy(asc(comments.createdAt));
+  }
+
+  // Comment Reaction methods
+  async getCommentReactions(commentId: number): Promise<CommentReaction[]> {
+    return db
+      .select()
+      .from(commentReactions)
+      .where(eq(commentReactions.commentId, commentId));
+  }
+
+  async addCommentReaction(insertReaction: InsertCommentReaction): Promise<CommentReaction> {
+    try {
+      const [reaction] = await db
+        .insert(commentReactions)
+        .values(insertReaction)
+        .returning();
+      return reaction;
+    } catch (error) {
+      // If there's a unique constraint violation, user already reacted with this reaction
+      // Just return the existing reaction
+      const [existingReaction] = await db
+        .select()
+        .from(commentReactions)
+        .where(and(
+          eq(commentReactions.userId, insertReaction.userId),
+          eq(commentReactions.commentId, insertReaction.commentId),
+          eq(commentReactions.reaction, insertReaction.reaction)
+        ));
+      
+      if (existingReaction) {
+        return existingReaction;
+      }
+      
+      throw error;
+    }
+  }
+
+  async removeCommentReaction(userId: number, commentId: number, reaction: string): Promise<boolean> {
+    await db
+      .delete(commentReactions)
+      .where(and(
+        eq(commentReactions.userId, userId),
+        eq(commentReactions.commentId, commentId),
+        eq(commentReactions.reaction, reaction)
+      ));
+    
+    return true;
+  }
+
+  // Resource methods
+  async getResources(type?: string): Promise<Resource[]> {
+    if (type) {
+      return db.select().from(resources).where(eq(resources.type, type));
+    }
+    return db.select().from(resources);
+  }
+
+  async getResourceById(id: number): Promise<Resource | undefined> {
+    const [resource] = await db.select().from(resources).where(eq(resources.id, id));
+    return resource;
+  }
+
+  async createResource(insertResource: InsertResource): Promise<Resource> {
+    const [resource] = await db.insert(resources).values(insertResource).returning();
+    return resource;
+  }
+
+  async updateResource(id: number, resourceData: Partial<Resource>): Promise<Resource | undefined> {
+    const [updatedResource] = await db
+      .update(resources)
+      .set(resourceData)
+      .where(eq(resources.id, id))
+      .returning();
+    return updatedResource;
+  }
+
+  async deleteResource(id: number): Promise<boolean> {
+    // First delete references in roadmapNodeResources
+    await db.delete(roadmapNodeResources).where(eq(roadmapNodeResources.resourceId, id));
+    
+    // Then delete the resource
+    await db.delete(resources).where(eq(resources.id, id));
+    
+    return true;
+  }
+
+  // Roadmap Node Resource methods
+  async getRoadmapNodeResources(roadmapId: number, nodeId: string): Promise<(RoadmapNodeResource & { resource: Resource })[]> {
+    return db
+      .select({
+        id: roadmapNodeResources.id,
+        roadmapId: roadmapNodeResources.roadmapId,
+        nodeId: roadmapNodeResources.nodeId,
+        resourceId: roadmapNodeResources.resourceId,
+        order: roadmapNodeResources.order,
+        createdAt: roadmapNodeResources.createdAt,
+        resource: resources
+      })
+      .from(roadmapNodeResources)
+      .where(and(
+        eq(roadmapNodeResources.roadmapId, roadmapId),
+        eq(roadmapNodeResources.nodeId, nodeId)
+      ))
+      .innerJoin(resources, eq(roadmapNodeResources.resourceId, resources.id))
+      .orderBy(asc(roadmapNodeResources.order));
+  }
+
+  async addResourceToNode(insertNodeResource: InsertRoadmapNodeResource): Promise<RoadmapNodeResource> {
+    const [nodeResource] = await db
+      .insert(roadmapNodeResources)
+      .values(insertNodeResource)
+      .returning();
+    return nodeResource;
+  }
+
+  async removeResourceFromNode(roadmapId: number, nodeId: string, resourceId: number): Promise<boolean> {
+    await db
+      .delete(roadmapNodeResources)
+      .where(and(
+        eq(roadmapNodeResources.roadmapId, roadmapId),
+        eq(roadmapNodeResources.nodeId, nodeId),
+        eq(roadmapNodeResources.resourceId, resourceId)
+      ));
+    
+    return true;
+  }
+
+  async reorderNodeResources(roadmapId: number, nodeId: string, resourceIds: number[]): Promise<RoadmapNodeResource[]> {
+    const updates: Promise<RoadmapNodeResource>[] = [];
+    
+    // Update order for each resource
+    for (let i = 0; i < resourceIds.length; i++) {
+      const resourceId = resourceIds[i];
+      const [updated] = await db
+        .update(roadmapNodeResources)
+        .set({ order: i })
+        .where(and(
+          eq(roadmapNodeResources.roadmapId, roadmapId),
+          eq(roadmapNodeResources.nodeId, nodeId),
+          eq(roadmapNodeResources.resourceId, resourceId)
+        ))
+        .returning();
+      
+      if (updated) {
+        updates.push(updated);
+      }
+    }
+    
+    return updates;
+  }
+
+  // Discussion Topic methods
+  async getDiscussionTopics(roadmapId?: number, nodeId?: string): Promise<DiscussionTopic[]> {
+    let query = db.select().from(discussionTopics);
+    
+    if (roadmapId && nodeId) {
+      query = query.where(and(
+        eq(discussionTopics.roadmapId, roadmapId),
+        eq(discussionTopics.nodeId, nodeId)
+      ));
+    } else if (roadmapId) {
+      query = query.where(eq(discussionTopics.roadmapId, roadmapId));
+    }
+    
+    return query.orderBy(desc(discussionTopics.createdAt));
+  }
+
+  async getDiscussionTopicById(id: number): Promise<DiscussionTopic | undefined> {
+    const [topic] = await db.select().from(discussionTopics).where(eq(discussionTopics.id, id));
+    return topic;
+  }
+
+  async createDiscussionTopic(insertTopic: InsertDiscussionTopic): Promise<DiscussionTopic> {
+    const [topic] = await db.insert(discussionTopics).values(insertTopic).returning();
+    return topic;
+  }
+
+  async updateDiscussionTopic(id: number, topicData: Partial<DiscussionTopic>): Promise<DiscussionTopic | undefined> {
+    const [updatedTopic] = await db
+      .update(discussionTopics)
+      .set({ ...topicData, updatedAt: new Date() })
+      .where(eq(discussionTopics.id, id))
+      .returning();
+    return updatedTopic;
+  }
+
+  async deleteDiscussionTopic(id: number): Promise<boolean> {
+    // First delete all replies to this topic
+    await db.delete(discussionReplies).where(eq(discussionReplies.topicId, id));
+    
+    // Then delete the topic itself
+    await db.delete(discussionTopics).where(eq(discussionTopics.id, id));
+    
+    return true;
+  }
+
+  async incrementTopicViewCount(id: number): Promise<DiscussionTopic | undefined> {
+    const [topic] = await db
+      .select()
+      .from(discussionTopics)
+      .where(eq(discussionTopics.id, id));
+    
+    if (!topic) return undefined;
+    
+    const [updatedTopic] = await db
+      .update(discussionTopics)
+      .set({ viewCount: topic.viewCount + 1 })
+      .where(eq(discussionTopics.id, id))
+      .returning();
+    
+    return updatedTopic;
+  }
+
+  // Discussion Reply methods
+  async getDiscussionReplies(topicId: number): Promise<DiscussionReply[]> {
+    return db
+      .select()
+      .from(discussionReplies)
+      .where(eq(discussionReplies.topicId, topicId))
+      .orderBy(asc(discussionReplies.createdAt));
+  }
+
+  async getDiscussionReplyById(id: number): Promise<DiscussionReply | undefined> {
+    const [reply] = await db.select().from(discussionReplies).where(eq(discussionReplies.id, id));
+    return reply;
+  }
+
+  async createDiscussionReply(insertReply: InsertDiscussionReply): Promise<DiscussionReply> {
+    const [reply] = await db.insert(discussionReplies).values(insertReply).returning();
+    return reply;
+  }
+
+  async updateDiscussionReply(id: number, content: string): Promise<DiscussionReply | undefined> {
+    const [updatedReply] = await db
+      .update(discussionReplies)
+      .set({ content, updatedAt: new Date() })
+      .where(eq(discussionReplies.id, id))
+      .returning();
+    return updatedReply;
+  }
+
+  async deleteDiscussionReply(id: number): Promise<boolean> {
+    await db.delete(discussionReplies).where(eq(discussionReplies.id, id));
+    return true;
+  }
+
+  async markReplyAsAccepted(id: number): Promise<DiscussionReply | undefined> {
+    // Get the reply to find its topic
+    const [reply] = await db.select().from(discussionReplies).where(eq(discussionReplies.id, id));
+    if (!reply) return undefined;
+    
+    // Reset isAcceptedAnswer for all replies in this topic
+    await db
+      .update(discussionReplies)
+      .set({ isAcceptedAnswer: false })
+      .where(eq(discussionReplies.topicId, reply.topicId));
+    
+    // Mark this reply as accepted
+    const [updatedReply] = await db
+      .update(discussionReplies)
+      .set({ isAcceptedAnswer: true })
+      .where(eq(discussionReplies.id, id))
+      .returning();
+    
+    return updatedReply;
+  }
+
+  // Blog Post methods
+  async getBlogPosts(status?: string, tag?: string): Promise<BlogPost[]> {
+    let query = db.select().from(blogPosts);
+    
+    if (status) {
+      query = query.where(eq(blogPosts.status, status));
+    }
+    
+    if (tag) {
+      // Query for posts that have the tag in their tags array
+      query = query.where(sql`${tag} = ANY(${blogPosts.tags})`);
+    }
+    
+    return query.orderBy(desc(blogPosts.createdAt));
+  }
+
+  async getBlogPostById(id: number): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.id, id));
+    return post;
+  }
+
+  async getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug));
+    return post;
+  }
+
+  async createBlogPost(insertPost: InsertBlogPost): Promise<BlogPost> {
+    const [post] = await db.insert(blogPosts).values(insertPost).returning();
+    return post;
+  }
+
+  async updateBlogPost(id: number, postData: Partial<BlogPost>): Promise<BlogPost | undefined> {
+    const [updatedPost] = await db
+      .update(blogPosts)
+      .set({ ...postData, updatedAt: new Date() })
+      .where(eq(blogPosts.id, id))
+      .returning();
+    return updatedPost;
+  }
+
+  async deleteBlogPost(id: number): Promise<boolean> {
+    await db.delete(blogPosts).where(eq(blogPosts.id, id));
+    return true;
+  }
+
+  async incrementBlogPostViewCount(id: number): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.id, id));
+    if (!post) return undefined;
+    
+    const [updatedPost] = await db
+      .update(blogPosts)
+      .set({ viewCount: post.viewCount + 1 })
+      .where(eq(blogPosts.id, id))
+      .returning();
+    
+    return updatedPost;
+  }
+}
+
+export const storage = new DatabaseStorage();
