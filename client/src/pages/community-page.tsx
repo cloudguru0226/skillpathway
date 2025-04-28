@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
-import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -94,7 +93,7 @@ export default function CommunityPage() {
     });
 
   return (
-    <Layout>
+    <div>
       <Helmet>
         <title>Community | Learning Platform</title>
       </Helmet>
@@ -353,6 +352,6 @@ export default function CommunityPage() {
           </div>
         </motion.div>
       </div>
-    </Layout>
+    </div>
   );
 }

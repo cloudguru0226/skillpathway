@@ -12,6 +12,8 @@ import { ProtectedRoute } from "./lib/protected-route";
 import RoadmapDetailPage from "@/pages/roadmap-detail-page";
 import AdminPage from "@/pages/admin-page";
 import UserProfile from "@/pages/user-profile";
+import CommunityPage from "@/pages/community-page";
+import GuidesPage from "@/pages/guides-page";
 
 function Router() {
   return (
@@ -22,6 +24,8 @@ function Router() {
       <ProtectedRoute path="/roadmap/:id" component={RoadmapDetailPage} />
       <ProtectedRoute path="/admin" component={AdminPage} />
       <ProtectedRoute path="/profile" component={UserProfile} />
+      <ProtectedRoute path="/community" component={CommunityPage} />
+      <ProtectedRoute path="/guides" component={GuidesPage} />
       <Route path="*" component={NotFound} />
     </Switch>
   );

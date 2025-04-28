@@ -158,7 +158,7 @@ export default function GuidesPage() {
   const displayResources = filteredResources.length > 0 ? filteredResources : demoResources;
 
   return (
-    <Layout>
+    <div>
       <Helmet>
         <title>Guides & Resources | Learning Platform</title>
       </Helmet>
@@ -294,6 +294,6 @@ export default function GuidesPage() {
           </div>
         </motion.div>
       </div>
-    </Layout>
+    </div>
   );
 }
