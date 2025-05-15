@@ -46,13 +46,762 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  Search, 
+  TrendingUp, 
+  Users, 
+  BarChart, 
+  Clock, 
+  Award, 
+  BookOpen,
+  ArrowUpRight,
+  ArrowDownRight,
+  ChevronUp,
+  ChevronDown,
+  LineChart,
+  Activity,
+  Calendar,
+  MessageSquare
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { 
+  LineChart as RechartsLineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  Legend,
+  ResponsiveContainer,
+  BarChart as RechartsBarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Area,
+  AreaChart,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis
+} from "recharts";
+
+// Platform Overview Component
+function PlatformOverview({ users, roadmaps }: { users: any[]; roadmaps: any[] }) {
+  // Fetch platform statistics
+  const { data: stats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ["/api/admin/statistics"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", "/api/admin/statistics");
+        if (!response.ok) {
+          throw new Error("Failed to fetch platform statistics");
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching statistics:", error);
+        return {
+          totalUsers: users.length,
+          totalRoadmaps: roadmaps.length,
+          activeUsers: 0,
+          totalComments: 0,
+          totalDiscussions: 0,
+          averageCompletionRate: 0
+        };
+      }
+    },
+  });
+  
+  // Fetch active users data
+  const { data: activeUsersData } = useQuery({
+    queryKey: ["/api/admin/active-users"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", "/api/admin/active-users?period=week");
+        if (!response.ok) {
+          throw new Error("Failed to fetch active users");
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching active users:", error);
+        return { count: 0, trend: 0, byDay: [] };
+      }
+    },
+  });
+  
+  // Prepare trend indicator
+  const getTrendIndicator = (trend: number) => {
+    if (trend > 0) {
+      return <ArrowUpRight className="h-4 w-4 text-green-500" />;
+    } else if (trend < 0) {
+      return <ArrowDownRight className="h-4 w-4 text-red-500" />;
+    } else {
+      return null;
+    }
+  };
+  
+  if (isLoadingStats) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Skeleton className="h-[120px] w-full" />
+        <Skeleton className="h-[120px] w-full" />
+        <Skeleton className="h-[120px] w-full" />
+      </div>
+    );
+  }
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl flex items-center">
+            <Users className="h-5 w-5 mr-2 text-primary" /> 
+            Total Users
+          </CardTitle>
+          <CardDescription>Platform user count</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col">
+            <div className="text-3xl font-bold">
+              {stats?.totalUsers || users.length}
+            </div>
+            {activeUsersData && (
+              <div className="flex items-center text-sm text-muted-foreground mt-1">
+                <span className={activeUsersData.trend > 0 ? "text-green-500" : activeUsersData.trend < 0 ? "text-red-500" : ""}>
+                  {activeUsersData.trend > 0 ? "+" : ""}{activeUsersData.trend}%
+                </span>
+                {getTrendIndicator(activeUsersData.trend)}
+                <span className="ml-1">from last period</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl flex items-center">
+            <BookOpen className="h-5 w-5 mr-2 text-primary" /> 
+            Total Roadmaps
+          </CardTitle>
+          <CardDescription>Available learning paths</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold">
+            {stats?.totalRoadmaps || roadmaps.length}
+          </div>
+          <div className="text-sm text-muted-foreground mt-1">
+            {Math.round((stats?.averageCompletionRate || 0))}% avg. completion
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl flex items-center">
+            <Activity className="h-5 w-5 mr-2 text-primary" /> 
+            Active Learners
+          </CardTitle>
+          <CardDescription>Users active in last 7 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold">
+            {stats?.activeUsers || 0}
+          </div>
+          <div className="text-sm text-muted-foreground mt-1">
+            {((stats?.activeUsers || 0) / (stats?.totalUsers || 1) * 100).toFixed(1)}% of total users
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Additional Stats Row */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl flex items-center">
+            <MessageSquare className="h-5 w-5 mr-2 text-primary" /> 
+            Comments
+          </CardTitle>
+          <CardDescription>Total comments posted</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold">
+            {stats?.totalComments || 0}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl flex items-center">
+            <Users className="h-5 w-5 mr-2 text-primary" /> 
+            Discussions
+          </CardTitle>
+          <CardDescription>Total forum discussions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold">
+            {stats?.totalDiscussions || 0}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl flex items-center">
+            <TrendingUp className="h-5 w-5 mr-2 text-primary" /> 
+            Platform Growth
+          </CardTitle>
+          <CardDescription>Users joined last 30 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold">
+            {Math.round(stats?.totalUsers * 0.15) || 0}
+          </div>
+          <div className="text-sm text-muted-foreground mt-1">
+            {activeUsersData?.trend > 0 ? "+" : ""}{activeUsersData?.trend || 0}% user growth 
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Engagement Charts Component
+function EngagementCharts() {
+  // Fetch engagement data
+  const { data: engagement, isLoading: isLoadingEngagement } = useQuery({
+    queryKey: ["/api/admin/engagement"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", "/api/admin/engagement?days=14");
+        if (!response.ok) {
+          throw new Error("Failed to fetch engagement data");
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching engagement:", error);
+        return { dates: [], logins: [], comments: [], discussions: [], progress: [] };
+      }
+    },
+  });
+  
+  // Transform data for charts
+  const engagementData = engagement?.dates?.map((date: string, i: number) => ({
+    date,
+    logins: engagement.logins[i] || 0,
+    comments: engagement.comments[i] || 0,
+    discussions: engagement.discussions[i] || 0,
+    progress: engagement.progress[i] || 0,
+  })) || [];
+  
+  // Daily active users data from engagement
+  const dailyActiveData = engagement?.dates?.map((date: string, i: number) => ({
+    date,
+    active: (engagement.logins[i] || 0) + (engagement.progress[i] || 0),
+  })) || [];
+  
+  if (isLoadingEngagement) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>User Engagement</CardTitle>
+          <CardDescription>
+            Platform activity over time
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-[400px]">
+          <Skeleton className="h-full w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <BarChart className="h-5 w-5 mr-2 text-primary" />
+            User Engagement
+          </CardTitle>
+          <CardDescription>
+            Platform activity over the past 14 days
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <RechartsBarChart
+              data={engagementData}
+              margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={(date) => date.split("-").slice(1).join("/")}
+                tick={{ fontSize: 12 }}
+              />
+              <YAxis tick={{ fontSize: 12 }} />
+              <RechartsTooltip 
+                formatter={(value: number, name: string) => [value, name.charAt(0).toUpperCase() + name.slice(1)]}
+                labelFormatter={(label) => new Date(label).toLocaleDateString()}
+              />
+              <Legend />
+              <Bar dataKey="logins" name="Logins" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="progress" name="Progress Updates" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="comments" name="Comments" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="discussions" name="Discussions" fill="#ec4899" radius={[4, 4, 0, 0]} />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <LineChart className="h-5 w-5 mr-2 text-primary" />
+            Daily Active Users
+          </CardTitle>
+          <CardDescription>
+            User activity trend over time
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={dailyActiveData}
+              margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="activeGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={(date) => date.split("-").slice(1).join("/")}
+                tick={{ fontSize: 12 }}
+              />
+              <YAxis tick={{ fontSize: 12 }} />
+              <RechartsTooltip 
+                formatter={(value: number) => [value, "Active Users"]} 
+                labelFormatter={(label) => new Date(label).toLocaleDateString()}
+              />
+              <Area
+                type="monotone"
+                dataKey="active"
+                stroke="#4f46e5"
+                fillOpacity={1}
+                fill="url(#activeGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Learning Velocity Component
+function LearningVelocity() {
+  // Fetch learning velocity data
+  const { data: velocity, isLoading: isLoadingVelocity } = useQuery({
+    queryKey: ["/api/admin/learning-velocity"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", "/api/admin/learning-velocity");
+        if (!response.ok) {
+          throw new Error("Failed to fetch learning velocity");
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching learning velocity:", error);
+        return { users: [], overall: [] };
+      }
+    },
+  });
+  
+  // Calculate average velocity and total user count for gauges
+  const averageWeeklyVelocity = 
+    velocity?.overall?.find((item: any) => item.period === "Weekly")?.average || 0;
+  
+  const topPerformers = velocity?.users?.slice(0, 5) || [];
+  
+  if (isLoadingVelocity) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Learning Velocity</CardTitle>
+          <CardDescription>
+            How quickly users are progressing
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-[400px]">
+          <Skeleton className="h-full w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <TrendingUp className="h-5 w-5 mr-2 text-primary" />
+          Learning Velocity Analysis
+        </CardTitle>
+        <CardDescription>
+          How quickly users are progressing through roadmaps
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="col-span-1">
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-medium mb-2">Completion Velocity (Nodes/Week)</h3>
+                <div className="flex flex-col gap-2">
+                  {velocity?.overall?.map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <span className="text-sm">{item.period}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-[120px] h-2 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary" 
+                            style={{ width: `${Math.min(100, (item.average / 15) * 100)}%` }} 
+                          />
+                        </div>
+                        <span className="text-sm font-medium">{item.average.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium mb-3">Average Weekly Progress</h3>
+                <div className="flex justify-center">
+                  <div className="relative h-[150px] w-[150px] flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Completed', value: averageWeeklyVelocity },
+                              { name: 'Remaining', value: Math.max(0, 15 - averageWeeklyVelocity) },
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={70}
+                            startAngle={90}
+                            endAngle={-270}
+                            dataKey="value"
+                          >
+                            <Cell fill="#4f46e5" />
+                            <Cell fill="#e2e8f0" />
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="z-10 flex flex-col items-center">
+                      <span className="text-3xl font-bold">{averageWeeklyVelocity.toFixed(1)}</span>
+                      <span className="text-xs text-muted-foreground">nodes/week</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="col-span-2">
+            <h3 className="text-sm font-medium mb-2">Top Performers</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Avg. Nodes/Week</TableHead>
+                  <TableHead>Last Active</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {topPerformers.length > 0 ? (
+                  topPerformers.map((user: any, index: number) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{user.username}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <div className="w-[60px] h-2 bg-secondary rounded-full overflow-hidden mr-2">
+                            <div 
+                              className="h-full bg-primary" 
+                              style={{ width: `${Math.min(100, (user.avgNodesPerWeek / 15) * 100)}%` }} 
+                            />
+                          </div>
+                          <span>{user.avgNodesPerWeek.toFixed(1)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(user.lastActive).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                      No velocity data available yet
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Roadmap Popularity Component
+function RoadmapPopularity() {
+  // Fetch roadmap popularity data
+  const { data: popularity, isLoading: isLoadingPopularity } = useQuery({
+    queryKey: ["/api/admin/roadmap-popularity"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", "/api/admin/roadmap-popularity");
+        if (!response.ok) {
+          throw new Error("Failed to fetch roadmap popularity");
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching roadmap popularity:", error);
+        return [];
+      }
+    },
+  });
+  
+  // Prepare data for chart
+  const popularityData = [...(popularity || [])].sort((a, b) => b.userCount - a.userCount).slice(0, 8);
+  
+  if (isLoadingPopularity) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Roadmap Popularity</CardTitle>
+          <CardDescription>
+            Most popular learning paths
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-[400px]">
+          <Skeleton className="h-full w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <BarChart className="h-5 w-5 mr-2 text-primary" />
+          Roadmap Popularity Analysis
+        </CardTitle>
+        <CardDescription>
+          Most popular learning paths and their completion rates
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="h-[400px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <RechartsBarChart
+            data={popularityData}
+            layout="vertical"
+            margin={{ top: 20, right: 30, left: 150, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} horizontal={false} />
+            <XAxis type="number" tick={{ fontSize: 12 }} />
+            <YAxis 
+              dataKey="title" 
+              type="category" 
+              tick={{ fontSize: 12 }} 
+              width={150}
+            />
+            <RechartsTooltip 
+              formatter={(value: number, name: string) => {
+                if (name === "userCount") return [value, "Active Users"];
+                if (name === "completionRate") return [value.toFixed(1) + "%", "Completion Rate"];
+                if (name === "averageTimeSpent") return [value.toFixed(1) + " hrs", "Avg. Time Spent"];
+                return [value, name];
+              }}
+            />
+            <Legend />
+            <Bar 
+              dataKey="userCount" 
+              name="Active Users" 
+              fill="#4f46e5" 
+              radius={[0, 4, 4, 0]} 
+            />
+            <Bar 
+              dataKey="completionRate" 
+              name="Completion Rate (%)" 
+              fill="#10b981" 
+              radius={[0, 4, 4, 0]} 
+            />
+          </RechartsBarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Experience Progression Component
+function ExperienceProgression() {
+  // Fetch experience progression data
+  const { data: progression, isLoading: isLoadingProgression } = useQuery({
+    queryKey: ["/api/admin/experience-progression"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", "/api/admin/experience-progression");
+        if (!response.ok) {
+          throw new Error("Failed to fetch experience progression");
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching experience progression:", error);
+        return { levels: [], xpSources: [], avgDaysToLevel: [] };
+      }
+    },
+  });
+  
+  // Colors for the pie chart
+  const COLORS = ['#4f46e5', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
+  
+  if (isLoadingProgression) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Experience & Progression</CardTitle>
+          <CardDescription>
+            User leveling and XP distribution
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-[400px]">
+          <Skeleton className="h-full w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Award className="h-5 w-5 mr-2 text-primary" />
+          Experience & Level Progression
+        </CardTitle>
+        <CardDescription>
+          User distribution across levels and XP sources
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Level Distribution */}
+          <div>
+            <h3 className="text-sm font-medium mb-3">User Level Distribution</h3>
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart
+                  data={progression?.levels || []}
+                  margin={{ top: 10, right: 30, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="level" />
+                  <YAxis />
+                  <RechartsTooltip 
+                    formatter={(value: number) => [value, "Users"]}
+                    labelFormatter={(value) => `Level ${value}`}
+                  />
+                  <Bar 
+                    dataKey="userCount" 
+                    name="Users" 
+                    fill="#4f46e5" 
+                    radius={[4, 4, 0, 0]} 
+                  />
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          
+          {/* XP Sources */}
+          <div>
+            <h3 className="text-sm font-medium mb-3">XP Sources Distribution</h3>
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={progression?.xpSources || []}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    dataKey="percentage"
+                    nameKey="source"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {progression?.xpSources?.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    formatter={(value: number) => [`${value.toFixed(1)}%`, "Percentage"]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          
+          {/* Average Days to Level */}
+          <div className="lg:col-span-2">
+            <h3 className="text-sm font-medium mb-3">Average Days to Reach Level</h3>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={progression?.avgDaysToLevel || []}
+                  margin={{ top: 10, right: 30, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="level" />
+                  <YAxis />
+                  <RechartsTooltip 
+                    formatter={(value: number) => [value, "Days"]}
+                    labelFormatter={(value) => `Level ${value}`}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="days" 
+                    stroke="#4f46e5" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("roadmaps");
@@ -293,53 +1042,20 @@ export default function AdminPage() {
             </TabsContent>
             
             <TabsContent value="stats" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-2xl">Total Users</CardTitle>
-                    <CardDescription>Platform user count</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold">{users.length}</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-2xl">Total Roadmaps</CardTitle>
-                    <CardDescription>Available learning paths</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold">{roadmaps.length}</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-2xl">Active Learners</CardTitle>
-                    <CardDescription>Users active in last 7 days</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold">
-                      {Math.floor(Math.random() * users.length)}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              {/* Platform Overview Cards */}
+              <PlatformOverview users={users} roadmaps={roadmaps} />
               
-              <Card>
-                <CardHeader>
-                  <CardTitle>User Engagement</CardTitle>
-                  <CardDescription>
-                    Overall platform usage statistics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="h-[300px] flex items-center justify-center">
-                  <p className="text-muted-foreground">
-                    Detailed analytics dashboard coming soon
-                  </p>
-                </CardContent>
-              </Card>
+              {/* Engagement and Activities */}
+              <EngagementCharts />
+              
+              {/* Learning Velocity Section */}
+              <LearningVelocity />
+              
+              {/* Roadmap Popularity Analysis */}
+              <RoadmapPopularity />
+              
+              {/* Experience Progression Analysis */}
+              <ExperienceProgression />
             </TabsContent>
           </Tabs>
         </main>

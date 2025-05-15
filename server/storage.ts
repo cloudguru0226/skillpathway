@@ -21,7 +21,8 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import { db, pool } from "./db";
-import { eq, and, desc, isNull, sql, not, gte, lt, asc } from "drizzle-orm";
+import { eq, and, desc, isNull, sql, not, gte, lt, asc, inArray, like, gt, lte, or, count } from "drizzle-orm";
+import * as schema from "@shared/schema";
 import connectPg from "connect-pg-simple";
 
 const PostgresSessionStore = connectPg(session);
