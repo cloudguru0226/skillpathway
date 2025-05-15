@@ -19,6 +19,17 @@ import {
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
+  // Middleware to verify admin status
+  const requireAdmin = (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    if (!req.user?.isAdmin) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+    next();
+  };
+
   // Special endpoint for seeding roadmaps (for development purposes)
   app.post("/api/seed-roadmaps", async (req, res) => {
     try {
