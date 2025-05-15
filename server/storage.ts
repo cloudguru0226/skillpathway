@@ -27,6 +27,49 @@ import connectPg from "connect-pg-simple";
 const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
+  // Analytics & Admin methods
+  getPlatformStats(): Promise<{
+    totalUsers: number;
+    totalRoadmaps: number;
+    activeUsers: number;
+    totalComments: number;
+    totalDiscussions: number;
+    averageCompletionRate: number;
+  }>;
+  
+  getUserEngagement(days: number): Promise<{
+    dates: string[];
+    logins: number[];
+    comments: number[];
+    discussions: number[];
+    progress: number[];
+  }>;
+  
+  getLearningVelocity(): Promise<{
+    users: {userId: number; username: string; avgNodesPerWeek: number; lastActive: Date}[];
+    overall: {period: string; average: number}[];
+  }>;
+  
+  getRoadmapPopularity(): Promise<{
+    roadmapId: number;
+    title: string;
+    userCount: number;
+    completionRate: number;
+    averageTimeSpent: number;
+  }[]>;
+  
+  getExperienceProgression(): Promise<{
+    levels: {level: number; userCount: number}[];
+    xpSources: {source: string; percentage: number}[];
+    avgDaysToLevel: {level: number; days: number}[];
+  }>;
+  
+  getActiveUsers(period: string): Promise<{
+    count: number;
+    trend: number;
+    byDay: {day: string; count: number}[];
+  }>;
+
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -767,6 +810,559 @@ export class MemStorage implements IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Analytics & Admin methods
+  async getPlatformStats(): Promise<{
+    totalUsers: number;
+    totalRoadmaps: number;
+    activeUsers: number;
+    totalComments: number;
+    totalDiscussions: number;
+    averageCompletionRate: number;
+  }> {
+    // Get total users count
+    const users = await db.select({ count: count() }).from(schema.users);
+    const totalUsers = users[0].count;
+    
+    // Get total roadmaps count
+    const roadmapsCount = await db.select({ count: count() }).from(schema.roadmaps);
+    const totalRoadmaps = roadmapsCount[0].count;
+    
+    // Get users active in the last 7 days (with activity logs or progress updates)
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    
+    const activeUsersQuery = await db.select({ userId: schema.activityLogs.userId })
+      .from(schema.activityLogs)
+      .where(gt(schema.activityLogs.timestamp, lastWeek))
+      .groupBy(schema.activityLogs.userId);
+    
+    const activeUsers = activeUsersQuery.length;
+    
+    // Get total comments
+    const commentsCount = await db.select({ count: count() }).from(schema.comments);
+    const totalComments = commentsCount[0].count;
+    
+    // Get total discussions
+    const discussionsCount = await db.select({ count: count() }).from(schema.discussionTopics);
+    const totalDiscussions = discussionsCount[0].count;
+    
+    // Get average completion rate across all user progress entries
+    const progressEntries = await db.select({
+      userId: schema.userProgress.userId,
+      roadmapId: schema.userProgress.roadmapId,
+      progress: schema.userProgress.progress
+    }).from(schema.userProgress);
+    
+    // Calculate completion rates from the progress JSON data
+    let totalCompletionRate = 0;
+    let validProgressEntries = 0;
+    
+    for (const entry of progressEntries) {
+      const progress = entry.progress as any;
+      if (progress && progress.completedNodes && progress.totalNodes) {
+        const completionRate = (progress.completedNodes / progress.totalNodes) * 100;
+        totalCompletionRate += completionRate;
+        validProgressEntries++;
+      }
+    }
+    
+    const averageCompletionRate = validProgressEntries > 0 
+      ? Number((totalCompletionRate / validProgressEntries).toFixed(2))
+      : 0;
+    
+    return {
+      totalUsers,
+      totalRoadmaps,
+      activeUsers,
+      totalComments,
+      totalDiscussions,
+      averageCompletionRate
+    };
+  }
+  
+  async getUserEngagement(days: number): Promise<{
+    dates: string[];
+    logins: number[];
+    comments: number[];
+    discussions: number[];
+    progress: number[];
+  }> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    // Generate array of dates for the last n days
+    const dates: string[] = [];
+    const logins: number[] = Array(days).fill(0);
+    const comments: number[] = Array(days).fill(0);
+    const discussions: number[] = Array(days).fill(0);
+    const progress: number[] = Array(days).fill(0);
+    
+    for (let i = 0; i < days; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      // Format as YYYY-MM-DD
+      dates.unshift(date.toISOString().split('T')[0]);
+    }
+    
+    // Get login activity (from activity logs)
+    const loginActivities = await db.select({
+      timestamp: schema.activityLogs.timestamp,
+      type: schema.activityLogs.activityType
+    })
+    .from(schema.activityLogs)
+    .where(and(
+      eq(schema.activityLogs.activityType, 'login'),
+      gt(schema.activityLogs.timestamp, startDate)
+    ));
+    
+    // Count login activities by day
+    for (const activity of loginActivities) {
+      const activityDate = activity.timestamp.toISOString().split('T')[0];
+      const dateIndex = dates.indexOf(activityDate);
+      if (dateIndex !== -1) {
+        logins[dateIndex]++;
+      }
+    }
+    
+    // Get comment activities
+    const commentActivities = await db.select({
+      createdAt: schema.comments.createdAt
+    })
+    .from(schema.comments)
+    .where(gt(schema.comments.createdAt, startDate));
+    
+    // Count comment activities by day
+    for (const activity of commentActivities) {
+      const activityDate = activity.createdAt.toISOString().split('T')[0];
+      const dateIndex = dates.indexOf(activityDate);
+      if (dateIndex !== -1) {
+        comments[dateIndex]++;
+      }
+    }
+    
+    // Get discussion activities
+    const discussionActivities = await db.select({
+      createdAt: schema.discussionTopics.createdAt
+    })
+    .from(schema.discussionTopics)
+    .where(gt(schema.discussionTopics.createdAt, startDate));
+    
+    // Count discussion activities by day
+    for (const activity of discussionActivities) {
+      const activityDate = activity.createdAt.toISOString().split('T')[0];
+      const dateIndex = dates.indexOf(activityDate);
+      if (dateIndex !== -1) {
+        discussions[dateIndex]++;
+      }
+    }
+    
+    // Get progress update activities
+    const progressActivities = await db.select({
+      updatedAt: schema.userProgress.updatedAt
+    })
+    .from(schema.userProgress)
+    .where(gt(schema.userProgress.updatedAt, startDate));
+    
+    // Count progress update activities by day
+    for (const activity of progressActivities) {
+      const activityDate = activity.updatedAt.toISOString().split('T')[0];
+      const dateIndex = dates.indexOf(activityDate);
+      if (dateIndex !== -1) {
+        progress[dateIndex]++;
+      }
+    }
+    
+    return {
+      dates,
+      logins,
+      comments,
+      discussions,
+      progress
+    };
+  }
+  
+  async getLearningVelocity(): Promise<{
+    users: { userId: number; username: string; avgNodesPerWeek: number; lastActive: Date }[];
+    overall: { period: string; average: number }[];
+  }> {
+    // Get all user progress data
+    const progressData = await db.select({
+      userId: schema.userProgress.userId,
+      progress: schema.userProgress.progress,
+      startedAt: schema.userProgress.startedAt,
+      updatedAt: schema.userProgress.updatedAt
+    })
+    .from(schema.userProgress);
+    
+    // Process to calculate learning velocity
+    const userVelocities: Map<number, {
+      userId: number;
+      completedNodes: number;
+      startedAt: Date;
+      lastActive: Date;
+      daysSinceStart: number;
+    }> = new Map();
+    
+    // Calculate velocity for each user
+    for (const entry of progressData) {
+      const progress = entry.progress as any;
+      if (!progress || !progress.completedNodes) continue;
+      
+      const userId = entry.userId;
+      const completedNodes = progress.completedNodes || 0;
+      const startedAt = entry.startedAt;
+      const updatedAt = entry.updatedAt;
+      
+      const today = new Date();
+      const daysSinceStart = Math.max(1, Math.ceil((today.getTime() - startedAt.getTime()) / (1000 * 60 * 60 * 24)));
+      
+      if (userVelocities.has(userId)) {
+        const existing = userVelocities.get(userId)!;
+        userVelocities.set(userId, {
+          userId,
+          completedNodes: existing.completedNodes + completedNodes,
+          startedAt: new Date(Math.min(existing.startedAt.getTime(), startedAt.getTime())),
+          lastActive: new Date(Math.max(existing.lastActive.getTime(), updatedAt.getTime())),
+          daysSinceStart: Math.max(existing.daysSinceStart, daysSinceStart)
+        });
+      } else {
+        userVelocities.set(userId, {
+          userId,
+          completedNodes,
+          startedAt,
+          lastActive: updatedAt,
+          daysSinceStart
+        });
+      }
+    }
+    
+    // Calculate average nodes per week for each user
+    const userResults: { userId: number; username: string; avgNodesPerWeek: number; lastActive: Date }[] = [];
+    
+    // Fetch usernames for all users with velocity data
+    const userIds = Array.from(userVelocities.keys());
+    const usernames = await db.select({
+      id: schema.users.id,
+      username: schema.users.username
+    })
+    .from(schema.users)
+    .where(inArray(schema.users.id, userIds));
+    
+    // Create a map of user IDs to usernames
+    const usernameMap = new Map(usernames.map(u => [u.id, u.username]));
+    
+    // Calculate velocity for each user
+    for (const [userId, data] of userVelocities.entries()) {
+      const weeksActive = Math.max(1, data.daysSinceStart / 7);
+      const avgNodesPerWeek = Number((data.completedNodes / weeksActive).toFixed(2));
+      
+      userResults.push({
+        userId,
+        username: usernameMap.get(userId) || `User ${userId}`,
+        avgNodesPerWeek,
+        lastActive: data.lastActive
+      });
+    }
+    
+    // Sort by velocity (highest first)
+    userResults.sort((a, b) => b.avgNodesPerWeek - a.avgNodesPerWeek);
+    
+    // Calculate overall averages for different time periods
+    let totalNodesCompleted = 0;
+    let totalDays = 0;
+    
+    for (const data of userVelocities.values()) {
+      totalNodesCompleted += data.completedNodes;
+      totalDays += data.daysSinceStart;
+    }
+    
+    const avgNodesPerDay = totalDays > 0 ? totalNodesCompleted / totalDays : 0;
+    
+    return {
+      users: userResults,
+      overall: [
+        { period: "Daily", average: Number(avgNodesPerDay.toFixed(2)) },
+        { period: "Weekly", average: Number((avgNodesPerDay * 7).toFixed(2)) },
+        { period: "Monthly", average: Number((avgNodesPerDay * 30).toFixed(2)) }
+      ]
+    };
+  }
+  
+  async getRoadmapPopularity(): Promise<{
+    roadmapId: number;
+    title: string;
+    userCount: number;
+    completionRate: number;
+    averageTimeSpent: number;
+  }[]> {
+    // Get all roadmaps
+    const roadmaps = await db.select({
+      id: schema.roadmaps.id,
+      title: schema.roadmaps.title
+    }).from(schema.roadmaps);
+    
+    const results: {
+      roadmapId: number;
+      title: string;
+      userCount: number;
+      completionRate: number;
+      averageTimeSpent: number;
+    }[] = [];
+    
+    // For each roadmap, get popularity metrics
+    for (const roadmap of roadmaps) {
+      // Get user progress for this roadmap
+      const progressEntries = await db.select({
+        userId: schema.userProgress.userId,
+        progress: schema.userProgress.progress,
+        startedAt: schema.userProgress.startedAt,
+        updatedAt: schema.userProgress.updatedAt
+      })
+      .from(schema.userProgress)
+      .where(eq(schema.userProgress.roadmapId, roadmap.id));
+      
+      const userCount = progressEntries.length;
+      
+      // Calculate completion rate
+      let totalCompletionRate = 0;
+      let totalTimeSpent = 0;
+      
+      for (const entry of progressEntries) {
+        const progress = entry.progress as any;
+        if (progress && progress.completedNodes && progress.totalNodes) {
+          totalCompletionRate += (progress.completedNodes / progress.totalNodes) * 100;
+          
+          // Calculate time spent (in hours)
+          const startTime = entry.startedAt.getTime();
+          const latestTime = entry.updatedAt.getTime();
+          const diffHours = (latestTime - startTime) / (1000 * 60 * 60);
+          
+          // Cap time spent at a reasonable maximum per roadmap (48 hours)
+          totalTimeSpent += Math.min(diffHours, 48);
+        }
+      }
+      
+      const completionRate = userCount > 0 ? Number((totalCompletionRate / userCount).toFixed(2)) : 0;
+      const averageTimeSpent = userCount > 0 ? Number((totalTimeSpent / userCount).toFixed(2)) : 0;
+      
+      results.push({
+        roadmapId: roadmap.id,
+        title: roadmap.title,
+        userCount,
+        completionRate,
+        averageTimeSpent
+      });
+    }
+    
+    // Sort by user count (descending)
+    return results.sort((a, b) => b.userCount - a.userCount);
+  }
+  
+  async getExperienceProgression(): Promise<{
+    levels: { level: number; userCount: number }[];
+    xpSources: { source: string; percentage: number }[];
+    avgDaysToLevel: { level: number; days: number }[];
+  }> {
+    // Get all user experience levels
+    const userExperienceData = await db.select({
+      userId: schema.userExperience.userId,
+      currentLevel: schema.userExperience.currentLevel,
+      totalExperience: schema.userExperience.totalExperience,
+      updatedAt: schema.userExperience.updatedAt
+    }).from(schema.userExperience);
+    
+    // Count users at each level
+    const levelCounts = new Map<number, number>();
+    
+    for (const data of userExperienceData) {
+      const level = data.currentLevel;
+      levelCounts.set(level, (levelCounts.get(level) || 0) + 1);
+    }
+    
+    // Convert to array of {level, userCount}
+    const levels = Array.from(levelCounts.entries()).map(([level, userCount]) => ({
+      level,
+      userCount
+    })).sort((a, b) => a.level - b.level);
+    
+    // Get experience transaction sources
+    const xpTransactions = await db.select({
+      amount: schema.experienceTransactions.amount,
+      reason: schema.experienceTransactions.reason
+    }).from(schema.experienceTransactions);
+    
+    // Group by reason and calculate percentages
+    const xpBySource = new Map<string, number>();
+    let totalXP = 0;
+    
+    for (const tx of xpTransactions) {
+      const source = tx.reason;
+      const amount = tx.amount;
+      totalXP += amount;
+      xpBySource.set(source, (xpBySource.get(source) || 0) + amount);
+    }
+    
+    // Calculate percentages
+    const xpSources = Array.from(xpBySource.entries())
+      .map(([source, amount]) => ({
+        source,
+        percentage: Number(((amount / totalXP) * 100).toFixed(2))
+      }))
+      .sort((a, b) => b.percentage - a.percentage);
+    
+    // Get average days to reach each level
+    // This requires level-up events from experience transactions
+    const levelUpEvents = await db.select({
+      userId: schema.experienceTransactions.userId,
+      createdAt: schema.experienceTransactions.createdAt,
+      reason: schema.experienceTransactions.reason,
+      amount: schema.experienceTransactions.amount
+    })
+    .from(schema.experienceTransactions)
+    .where(like(schema.experienceTransactions.reason, 'Level up to%'));
+    
+    // Group level-up events by user and calculate days between levels
+    const userLevelUps = new Map<number, Map<number, Date>>();
+    
+    for (const event of levelUpEvents) {
+      const userId = event.userId;
+      const levelMatch = event.reason.match(/Level up to (\d+)/);
+      if (!levelMatch) continue;
+      
+      const level = parseInt(levelMatch[1]);
+      const date = event.createdAt;
+      
+      if (!userLevelUps.has(userId)) {
+        userLevelUps.set(userId, new Map());
+      }
+      
+      userLevelUps.get(userId)!.set(level, date);
+    }
+    
+    // Calculate average days to reach each level
+    const levelDaysSum = new Map<number, { total: number, count: number }>();
+    
+    for (const [userId, levelDates] of userLevelUps.entries()) {
+      const levels = Array.from(levelDates.keys()).sort((a, b) => a - b);
+      
+      for (let i = 1; i < levels.length; i++) {
+        const previousLevel = levels[i - 1];
+        const currentLevel = levels[i];
+        const previousDate = levelDates.get(previousLevel)!;
+        const currentDate = levelDates.get(currentLevel)!;
+        
+        const daysDiff = (currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24);
+        
+        if (!levelDaysSum.has(currentLevel)) {
+          levelDaysSum.set(currentLevel, { total: 0, count: 0 });
+        }
+        
+        const data = levelDaysSum.get(currentLevel)!;
+        data.total += daysDiff;
+        data.count += 1;
+      }
+    }
+    
+    // Convert to array of {level, days}
+    const avgDaysToLevel = Array.from(levelDaysSum.entries())
+      .map(([level, data]) => ({
+        level,
+        days: Number((data.total / data.count).toFixed(2))
+      }))
+      .sort((a, b) => a.level - b.level);
+    
+    return {
+      levels,
+      xpSources,
+      avgDaysToLevel
+    };
+  }
+  
+  async getActiveUsers(period: string): Promise<{
+    count: number;
+    trend: number;
+    byDay: { day: string; count: number }[];
+  }> {
+    let daysToLookBack = 7;
+    
+    // Set time period based on input
+    switch (period) {
+      case 'day':
+        daysToLookBack = 1;
+        break;
+      case 'week':
+        daysToLookBack = 7;
+        break;
+      case 'month':
+        daysToLookBack = 30;
+        break;
+      default:
+        daysToLookBack = 7;
+    }
+    
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - daysToLookBack);
+    
+    // Previous period for trend calculation
+    const previousStartDate = new Date(startDate);
+    previousStartDate.setDate(previousStartDate.getDate() - daysToLookBack);
+    
+    // Query active users in current period
+    const activeUsersQuery = await db.select({ userId: schema.activityLogs.userId })
+      .from(schema.activityLogs)
+      .where(gt(schema.activityLogs.timestamp, startDate))
+      .groupBy(schema.activityLogs.userId);
+    
+    const activeUsersCount = activeUsersQuery.length;
+    
+    // Query active users in previous period for trend
+    const previousActiveUsersQuery = await db.select({ userId: schema.activityLogs.userId })
+      .from(schema.activityLogs)
+      .where(and(
+        gt(schema.activityLogs.timestamp, previousStartDate),
+        lt(schema.activityLogs.timestamp, startDate)
+      ))
+      .groupBy(schema.activityLogs.userId);
+    
+    const previousActiveUsersCount = previousActiveUsersQuery.length;
+    
+    // Calculate trend (percentage change)
+    let trend = 0;
+    if (previousActiveUsersCount > 0) {
+      trend = Number((((activeUsersCount - previousActiveUsersCount) / previousActiveUsersCount) * 100).toFixed(2));
+    }
+    
+    // Get daily active users
+    const byDay: { day: string; count: number }[] = [];
+    
+    for (let i = 0; i < daysToLookBack; i++) {
+      const dayStart = new Date();
+      dayStart.setDate(dayStart.getDate() - i);
+      dayStart.setHours(0, 0, 0, 0);
+      
+      const dayEnd = new Date(dayStart);
+      dayEnd.setHours(23, 59, 59, 999);
+      
+      const dailyActiveUsersQuery = await db.select({ userId: schema.activityLogs.userId })
+        .from(schema.activityLogs)
+        .where(and(
+          gte(schema.activityLogs.timestamp, dayStart),
+          lte(schema.activityLogs.timestamp, dayEnd)
+        ))
+        .groupBy(schema.activityLogs.userId);
+      
+      byDay.unshift({
+        day: dayStart.toISOString().split('T')[0],
+        count: dailyActiveUsersQuery.length
+      });
+    }
+    
+    return {
+      count: activeUsersCount,
+      trend,
+      byDay
+    };
+  }
   sessionStore: session.Store;
 
   constructor() {

@@ -910,6 +910,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.json(resources);
   });
 
+  // ======== ADMIN ANALYTICS ENDPOINTS ========
+
+  // Get platform statistics - requires admin authentication
+  app.get("/api/admin/statistics", requireAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getPlatformStats();
+      return res.status(200).json(stats);
+    } catch (error) {
+      console.error("Error getting platform statistics:", error);
+      return res.status(500).json({ message: "Failed to get platform statistics" });
+    }
+  });
+
+  // Get user engagement metrics over time - requires admin authentication
+  app.get("/api/admin/engagement", requireAdmin, async (req, res) => {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      const engagement = await storage.getUserEngagement(days);
+      return res.status(200).json(engagement);
+    } catch (error) {
+      console.error("Error getting user engagement:", error);
+      return res.status(500).json({ message: "Failed to get user engagement" });
+    }
+  });
+
+  // Get learning velocity metrics - requires admin authentication
+  app.get("/api/admin/learning-velocity", requireAdmin, async (req, res) => {
+    try {
+      const velocity = await storage.getLearningVelocity();
+      return res.status(200).json(velocity);
+    } catch (error) {
+      console.error("Error getting learning velocity:", error);
+      return res.status(500).json({ message: "Failed to get learning velocity" });
+    }
+  });
+
+  // Get roadmap popularity metrics - requires admin authentication
+  app.get("/api/admin/roadmap-popularity", requireAdmin, async (req, res) => {
+    try {
+      const popularity = await storage.getRoadmapPopularity();
+      return res.status(200).json(popularity);
+    } catch (error) {
+      console.error("Error getting roadmap popularity:", error);
+      return res.status(500).json({ message: "Failed to get roadmap popularity" });
+    }
+  });
+  
+  // Get experience breakdown and progression metrics - requires admin authentication
+  app.get("/api/admin/experience-progression", requireAdmin, async (req, res) => {
+    try {
+      const progression = await storage.getExperienceProgression();
+      return res.status(200).json(progression);
+    } catch (error) {
+      console.error("Error getting experience progression:", error);
+      return res.status(500).json({ message: "Failed to get experience progression" });
+    }
+  });
+
+  // Get active users data - requires admin authentication
+  app.get("/api/admin/active-users", requireAdmin, async (req, res) => {
+    try {
+      const period = req.query.period as string || "week"; // day, week, month
+      const activeUsers = await storage.getActiveUsers(period);
+      return res.status(200).json(activeUsers);
+    } catch (error) {
+      console.error("Error getting active users:", error);
+      return res.status(500).json({ message: "Failed to get active users" });
+    }
+  });
+
   // Create HTTP server and return it for setup in index.ts
   const httpServer = createServer(app);
   return httpServer;
