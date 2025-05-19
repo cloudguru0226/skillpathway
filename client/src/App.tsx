@@ -34,6 +34,17 @@ function Router() {
       <ProtectedRoute path="/profile" component={UserProfile} />
       <ProtectedRoute path="/community" component={CommunityPage} />
       <ProtectedRoute path="/guides" component={GuidesPage} />
+      
+      {/* Labs Routes */}
+      <ProtectedRoute path="/labs" component={LabsPage} />
+      <ProtectedRoute path="/labs/:id" component={LabDetailPage} />
+      <ProtectedRoute path="/labs/instance/:id" component={LabInstancePage} />
+      
+      {/* Courses Routes */}
+      <ProtectedRoute path="/courses" component={CoursesPage} />
+      <ProtectedRoute path="/courses/:id" component={CourseDetailPage} />
+      <ProtectedRoute path="/certificates" component={CertificatesPage} />
+      
       <Route path="*" component={NotFound} />
     </Switch>
   );
