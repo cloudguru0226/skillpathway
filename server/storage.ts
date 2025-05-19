@@ -17,7 +17,23 @@ import {
   roadmapNodeResources, type RoadmapNodeResource, type InsertRoadmapNodeResource,
   discussionTopics, type DiscussionTopic, type InsertDiscussionTopic,
   discussionReplies, type DiscussionReply, type InsertDiscussionReply,
-  blogPosts, type BlogPost, type InsertBlogPost
+  blogPosts, type BlogPost, type InsertBlogPost,
+  // New RBAC schemas
+  roles, type Role, type InsertRole,
+  userRoles, type UserRole, type InsertUserRole,
+  // Terraform Lab Integration schemas
+  labEnvironments, type LabEnvironment, type InsertLabEnvironment,
+  labInstances, type LabInstance, type InsertLabInstance,
+  labTasks, type LabTask, type InsertLabTask,
+  userLabTaskProgress, type UserLabTaskProgress, type InsertUserLabTaskProgress,
+  labResources, type LabResource, type InsertLabResource,
+  // LMS Enhancement schemas
+  courses, type Course, type InsertCourse,
+  courseModules, type CourseModule, type InsertCourseModule,
+  courseContentItems, type CourseContentItem, type InsertCourseContentItem,
+  courseEnrollments, type CourseEnrollment, type InsertCourseEnrollment,
+  contentProgress, type ContentProgress, type InsertContentProgress,
+  certificates, type Certificate, type InsertCertificate
 } from "@shared/schema";
 import session from "express-session";
 import { db, pool } from "./db";
@@ -36,6 +52,9 @@ export interface IStorage {
     totalComments: number;
     totalDiscussions: number;
     averageCompletionRate: number;
+    totalCourses?: number;
+    totalLabEnvironments?: number;
+    activeLabInstances?: number;
   }>;
   
   getUserEngagement(days: number): Promise<{
@@ -44,6 +63,8 @@ export interface IStorage {
     comments: number[];
     discussions: number[];
     progress: number[];
+    labAccess?: number[];
+    courseInteractions?: number[];
   }>;
   
   getLearningVelocity(): Promise<{
@@ -70,6 +91,37 @@ export interface IStorage {
     trend: number;
     byDay: {day: string; count: number}[];
   }>;
+  
+  getLaboratoryUsage(): Promise<{
+    totalProvisionedLabs: number;
+    activeInstances: number;
+    provisioningFailures: number;
+    resourceCost: number;
+    completionRate: number;
+    labPopularity: {
+      id: number;
+      name: string;
+      instances: number;
+      averageCompletionRate: number;
+    }[];
+  }>;
+  
+  getCourseAnalytics(): Promise<{
+    totalEnrollments: number;
+    activeCourses: number;
+    completionRate: number;
+    popularCourses: {
+      id: number;
+      title: string;
+      enrollments: number;
+      completionRate: number;
+    }[];
+    userProgression: {
+      date: string;
+      newEnrollments: number;
+      completions: number;
+    }[];
+  }>;
 
   // User methods
   getUser(id: number): Promise<User | undefined>;
@@ -77,6 +129,83 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
+  
+  // RBAC methods
+  getRoles(): Promise<Role[]>;
+  getRole(id: number): Promise<Role | undefined>;
+  getRoleByName(name: string): Promise<Role | undefined>;
+  createRole(role: InsertRole): Promise<Role>;
+  updateRole(id: number, role: Partial<Role>): Promise<Role | undefined>;
+  deleteRole(id: number): Promise<boolean>;
+  
+  getUserRoles(userId: number): Promise<(Role & { assignedAt: Date })[]>;
+  assignRoleToUser(userRole: InsertUserRole): Promise<UserRole>;
+  removeRoleFromUser(userId: number, roleId: number): Promise<boolean>;
+  hasPermission(userId: number, permission: string): Promise<boolean>;
+  
+  // Terraform Lab Integration methods
+  getLabEnvironments(filters?: { difficulty?: string; tags?: string[]; isActive?: boolean }): Promise<LabEnvironment[]>;
+  getLabEnvironment(id: number): Promise<LabEnvironment | undefined>;
+  createLabEnvironment(environment: InsertLabEnvironment): Promise<LabEnvironment>;
+  updateLabEnvironment(id: number, updates: Partial<LabEnvironment>): Promise<LabEnvironment | undefined>;
+  deleteLabEnvironment(id: number): Promise<boolean>;
+  
+  getLabInstance(id: number): Promise<LabInstance | undefined>;
+  getUserLabInstances(userId: number): Promise<LabInstance[]>;
+  createLabInstance(instance: InsertLabInstance): Promise<LabInstance>;
+  updateLabInstanceState(id: number, state: string, details?: any): Promise<LabInstance | undefined>;
+  terminateLabInstance(id: number): Promise<boolean>;
+  
+  getLabTasks(environmentId: number): Promise<LabTask[]>;
+  getLabTask(id: number): Promise<LabTask | undefined>;
+  createLabTask(task: InsertLabTask): Promise<LabTask>;
+  updateLabTask(id: number, updates: Partial<LabTask>): Promise<LabTask | undefined>;
+  deleteLabTask(id: number): Promise<boolean>;
+  
+  getLabTaskProgress(userId: number, instanceId: number): Promise<UserLabTaskProgress[]>;
+  updateLabTaskProgress(progress: InsertUserLabTaskProgress): Promise<UserLabTaskProgress>;
+  verifyLabTask(userId: number, instanceId: number, taskId: number, solution: string): Promise<{ 
+    success: boolean; 
+    message: string; 
+    points: number;
+    completedTask?: UserLabTaskProgress;
+  }>;
+  
+  getLabResources(environmentId: number): Promise<LabResource[]>;
+  createLabResource(resource: InsertLabResource): Promise<LabResource>;
+  updateLabResource(id: number, updates: Partial<LabResource>): Promise<LabResource | undefined>;
+  deleteLabResource(id: number): Promise<boolean>;
+  
+  // LMS Enhancement methods
+  getCourses(filters?: { difficulty?: string; tags?: string[]; status?: string }): Promise<Course[]>;
+  getCourse(id: number): Promise<Course | undefined>;
+  createCourse(course: InsertCourse): Promise<Course>;
+  updateCourse(id: number, updates: Partial<Course>): Promise<Course | undefined>;
+  deleteCourse(id: number): Promise<boolean>;
+  
+  getCourseModules(courseId: number): Promise<CourseModule[]>;
+  getCourseModule(id: number): Promise<CourseModule | undefined>;
+  createCourseModule(module: InsertCourseModule): Promise<CourseModule>;
+  updateCourseModule(id: number, updates: Partial<CourseModule>): Promise<CourseModule | undefined>;
+  deleteCourseModule(id: number): Promise<boolean>;
+  
+  getCourseContentItems(moduleId: number): Promise<CourseContentItem[]>;
+  getCourseContentItem(id: number): Promise<CourseContentItem | undefined>;
+  createCourseContentItem(item: InsertCourseContentItem): Promise<CourseContentItem>;
+  updateCourseContentItem(id: number, updates: Partial<CourseContentItem>): Promise<CourseContentItem | undefined>;
+  deleteCourseContentItem(id: number): Promise<boolean>;
+  
+  enrollUserInCourse(enrollment: InsertCourseEnrollment): Promise<CourseEnrollment>;
+  getUserEnrollments(userId: number): Promise<CourseEnrollment[]>;
+  getCourseEnrollments(courseId: number): Promise<CourseEnrollment[]>;
+  updateEnrollmentProgress(userId: number, courseId: number, updates: Partial<CourseEnrollment>): Promise<CourseEnrollment | undefined>;
+  
+  getUserContentProgress(userId: number, contentItemId: number): Promise<ContentProgress | undefined>;
+  updateContentProgress(progress: InsertContentProgress): Promise<ContentProgress>;
+  
+  issueCertificate(certificate: InsertCertificate): Promise<Certificate>;
+  getUserCertificates(userId: number): Promise<Certificate[]>;
+  verifyCertificate(verificationCode: string): Promise<Certificate | undefined>;
 
   // Roadmap methods
   getRoadmap(id: number): Promise<Roadmap | undefined>;

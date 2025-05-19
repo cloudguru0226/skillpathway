@@ -15,6 +15,14 @@ import UserProfile from "@/pages/user-profile";
 import CommunityPage from "@/pages/community-page";
 import GuidesPage from "@/pages/guides-page";
 
+// Labs and Courses pages
+import LabsPage from "@/pages/labs/labs-page";
+import LabDetailPage from "@/pages/labs/lab-detail-page";
+import LabInstancePage from "@/pages/labs/lab-instance-page";
+import CoursesPage from "@/pages/courses/courses-page";
+import CourseDetailPage from "@/pages/courses/course-detail-page";
+import CertificatesPage from "@/pages/courses/certificates-page";
+
 function Router() {
   return (
     <Switch>

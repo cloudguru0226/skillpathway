@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, jsonb, timestamp, varchar, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp, varchar, unique, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -425,3 +425,414 @@ export const insertBlogPostSchema = createInsertSchema(blogPosts).pick({
 
 export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
 export type BlogPost = typeof blogPosts.$inferSelect;
+
+// ============================================================================
+// Role-Based Access Control (RBAC) Schema
+// ============================================================================
+
+// Roles schema - Extended beyond simple admin/user
+export const roles = pgTable("roles", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 50 }).notNull().unique(),
+  description: text("description"),
+  permissions: jsonb("permissions").notNull(), // JSON array of permission strings
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRoleSchema = createInsertSchema(roles).pick({
+  name: true,
+  description: true,
+  permissions: true,
+});
+
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+export type Role = typeof roles.$inferSelect;
+
+// User Roles schema - Many-to-many relationship
+export const userRoles = pgTable("user_roles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  roleId: integer("role_id").notNull().references(() => roles.id),
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    unq: unique().on(table.userId, table.roleId)
+  }
+});
+
+export const insertUserRoleSchema = createInsertSchema(userRoles).pick({
+  userId: true,
+  roleId: true,
+});
+
+export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+export type UserRole = typeof userRoles.$inferSelect;
+
+// ============================================================================
+// Terraform Labs Integration Schema
+// ============================================================================
+
+// Lab Environments schema
+export const labEnvironments = pgTable("lab_environments", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description").notNull(),
+  terraformConfigUrl: text("terraform_config_url").notNull(), // Git repository URL or S3 path
+  terraformVersion: varchar("terraform_version", { length: 20 }).notNull(),
+  providerConfig: jsonb("provider_config").notNull(), // AWS, Azure, GCP, etc. configuration
+  variables: jsonb("variables").notNull(), // Default variables
+  tags: text("tags").array(),
+  difficulty: varchar("difficulty", { length: 20 }).notNull(), // 'beginner', 'intermediate', 'advanced'
+  estimatedTime: integer("estimated_time").notNull(), // in minutes
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertLabEnvironmentSchema = createInsertSchema(labEnvironments).pick({
+  name: true,
+  description: true,
+  terraformConfigUrl: true,
+  terraformVersion: true,
+  providerConfig: true,
+  variables: true,
+  tags: true,
+  difficulty: true,
+  estimatedTime: true,
+  isActive: true,
+});
+
+export type InsertLabEnvironment = z.infer<typeof insertLabEnvironmentSchema>;
+export type LabEnvironment = typeof labEnvironments.$inferSelect;
+
+// Lab Instances schema (provisioned environments)
+export const labInstances = pgTable("lab_instances", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  environmentId: integer("environment_id").notNull().references(() => labEnvironments.id),
+  state: varchar("state", { length: 30 }).notNull(), // 'provisioning', 'running', 'stopped', 'failed', 'destroyed'
+  stateDetails: jsonb("state_details"), // More detailed state information
+  tfState: jsonb("tf_state"), // Terraform state file (may be in external storage with reference here)
+  outputs: jsonb("outputs"), // Terraform outputs (IP addresses, URLs, etc.)
+  resourceIDs: jsonb("resource_ids"), // IDs of provisioned resources for tracking
+  startTime: timestamp("start_time").defaultNow().notNull(),
+  expiryTime: timestamp("expiry_time"), // When the lab auto-terminates
+  lastActiveTime: timestamp("last_active_time").defaultNow().notNull(),
+  variableOverrides: jsonb("variable_overrides"), // User-specific variable values
+  logUrl: text("log_url"), // URL to access provisioning/operation logs
+  cost: jsonb("cost"), // Track resource usage costs
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertLabInstanceSchema = createInsertSchema(labInstances).pick({
+  userId: true,
+  environmentId: true,
+  state: true,
+  stateDetails: true,
+  outputs: true,
+  resourceIDs: true,
+  expiryTime: true,
+  variableOverrides: true,
+  logUrl: true,
+});
+
+export type InsertLabInstance = z.infer<typeof insertLabInstanceSchema>;
+export type LabInstance = typeof labInstances.$inferSelect;
+
+// Lab Tasks schema (challenges or exercises within a lab)
+export const labTasks = pgTable("lab_tasks", {
+  id: serial("id").primaryKey(),
+  environmentId: integer("environment_id").notNull().references(() => labEnvironments.id),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  instructions: text("instructions").notNull(),
+  hintContent: text("hint_content"),
+  solutionContent: text("solution_content"),
+  verificationScript: text("verification_script"), // Script to verify task completion
+  order: integer("order").default(0).notNull(),
+  points: integer("points").default(10).notNull(),
+  isOptional: boolean("is_optional").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertLabTaskSchema = createInsertSchema(labTasks).pick({
+  environmentId: true,
+  title: true,
+  description: true,
+  instructions: true,
+  hintContent: true,
+  solutionContent: true,
+  verificationScript: true,
+  order: true,
+  points: true,
+  isOptional: true,
+});
+
+export type InsertLabTask = z.infer<typeof insertLabTaskSchema>;
+export type LabTask = typeof labTasks.$inferSelect;
+
+// User Lab Task Progress schema
+export const userLabTaskProgress = pgTable("user_lab_task_progress", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  instanceId: integer("instance_id").notNull().references(() => labInstances.id),
+  taskId: integer("task_id").notNull().references(() => labTasks.id),
+  status: varchar("status", { length: 20 }).notNull(), // 'not_started', 'in_progress', 'completed', 'failed'
+  attemptCount: integer("attempt_count").default(0).notNull(),
+  lastAttemptTime: timestamp("last_attempt_time"),
+  completionTime: timestamp("completion_time"),
+  userSolution: text("user_solution"), // User's solution code or answer
+  verificationResult: jsonb("verification_result"), // Result of verification script
+  pointsAwarded: integer("points_awarded").default(0).notNull(),
+  feedback: text("feedback"), // System or instructor feedback
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    unq: unique().on(table.userId, table.taskId, table.instanceId)
+  }
+});
+
+export const insertUserLabTaskProgressSchema = createInsertSchema(userLabTaskProgress).pick({
+  userId: true,
+  instanceId: true,
+  taskId: true,
+  status: true,
+  attemptCount: true,
+  userSolution: true,
+  verificationResult: true,
+  pointsAwarded: true,
+  feedback: true,
+});
+
+export type InsertUserLabTaskProgress = z.infer<typeof insertUserLabTaskProgressSchema>;
+export type UserLabTaskProgress = typeof userLabTaskProgress.$inferSelect;
+
+// Lab Resources schema (resources specific to labs)
+export const labResources = pgTable("lab_resources", {
+  id: serial("id").primaryKey(),
+  environmentId: integer("environment_id").notNull().references(() => labEnvironments.id),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 50 }).notNull(), // 'document', 'video', 'code_snippet', 'diagram'
+  content: text("content"), // For embedded content like code snippets
+  fileUrl: text("file_url"), // For external files
+  order: integer("order").default(0).notNull(),
+  isRequired: boolean("is_required").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertLabResourceSchema = createInsertSchema(labResources).pick({
+  environmentId: true,
+  title: true,
+  description: true,
+  type: true,
+  content: true,
+  fileUrl: true,
+  order: true,
+  isRequired: true,
+});
+
+export type InsertLabResource = z.infer<typeof insertLabResourceSchema>;
+export type LabResource = typeof labResources.$inferSelect;
+
+// ============================================================================
+// Learning Management System (LMS) Enhancements
+// ============================================================================
+
+// Courses schema (structured collections of roadmaps and materials)
+export const courses = pgTable("courses", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  objectives: text("objectives").array(),
+  prerequisites: text("prerequisites").array(),
+  coverImageUrl: text("cover_image_url"),
+  duration: integer("duration").notNull(), // in hours
+  difficulty: varchar("difficulty", { length: 20 }).notNull(), // 'beginner', 'intermediate', 'advanced'
+  status: varchar("status", { length: 20 }).default("draft").notNull(), // 'draft', 'published', 'archived'
+  enrollmentType: varchar("enrollment_type", { length: 20 }).default("open").notNull(), // 'open', 'invite_only', 'paid'
+  price: integer("price").default(0), // in cents, for paid courses
+  creatorId: integer("creator_id").notNull().references(() => users.id),
+  tags: text("tags").array(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCourseSchema = createInsertSchema(courses).pick({
+  title: true,
+  description: true,
+  objectives: true,
+  prerequisites: true,
+  coverImageUrl: true,
+  duration: true,
+  difficulty: true,
+  status: true,
+  enrollmentType: true,
+  price: true,
+  creatorId: true,
+  tags: true,
+});
+
+export type InsertCourse = z.infer<typeof insertCourseSchema>;
+export type Course = typeof courses.$inferSelect;
+
+// Course Modules schema
+export const courseModules = pgTable("course_modules", {
+  id: serial("id").primaryKey(),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  order: integer("order").default(0).notNull(),
+  isOptional: boolean("is_optional").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCourseModuleSchema = createInsertSchema(courseModules).pick({
+  courseId: true,
+  title: true,
+  description: true,
+  order: true,
+  isOptional: true,
+});
+
+export type InsertCourseModule = z.infer<typeof insertCourseModuleSchema>;
+export type CourseModule = typeof courseModules.$inferSelect;
+
+// Course Content Items schema (lessons, quizzes, labs, etc. within modules)
+export const courseContentItems = pgTable("course_content_items", {
+  id: serial("id").primaryKey(),
+  moduleId: integer("module_id").notNull().references(() => courseModules.id),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 30 }).notNull(), // 'lesson', 'quiz', 'lab', 'assignment', 'discussion'
+  content: jsonb("content").notNull(), // Structure depends on type
+  duration: integer("duration"), // in minutes
+  points: integer("points").default(0), // points awarded for completion
+  order: integer("order").default(0).notNull(),
+  isRequired: boolean("is_required").default(true).notNull(),
+  dependsOnIds: integer("depends_on_ids").array(), // prerequisites within the course
+  roadmapId: integer("roadmap_id").references(() => roadmaps.id),
+  labEnvironmentId: integer("lab_environment_id").references(() => labEnvironments.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCourseContentItemSchema = createInsertSchema(courseContentItems).pick({
+  moduleId: true,
+  title: true,
+  description: true,
+  type: true,
+  content: true,
+  duration: true,
+  points: true,
+  order: true,
+  isRequired: true,
+  dependsOnIds: true,
+  roadmapId: true,
+  labEnvironmentId: true,
+});
+
+export type InsertCourseContentItem = z.infer<typeof insertCourseContentItemSchema>;
+export type CourseContentItem = typeof courseContentItems.$inferSelect;
+
+// Course Enrollments schema
+export const courseEnrollments = pgTable("course_enrollments", {
+  id: serial("id").primaryKey(),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  enrollmentDate: timestamp("enrollment_date").defaultNow().notNull(),
+  status: varchar("status", { length: 20 }).default("active").notNull(), // 'active', 'completed', 'withdrawn'
+  completionDate: timestamp("completion_date"),
+  progress: integer("progress").default(0).notNull(), // percentage
+  certificateIssued: boolean("certificate_issued").default(false).notNull(),
+  certificateUrl: text("certificate_url"),
+  lastAccessDate: timestamp("last_access_date").defaultNow().notNull(),
+}, (table) => {
+  return {
+    unq: unique().on(table.courseId, table.userId)
+  }
+});
+
+export const insertCourseEnrollmentSchema = createInsertSchema(courseEnrollments).pick({
+  courseId: true,
+  userId: true,
+  status: true,
+  completionDate: true,
+  progress: true,
+  certificateIssued: true,
+  certificateUrl: true,
+});
+
+export type InsertCourseEnrollment = z.infer<typeof insertCourseEnrollmentSchema>;
+export type CourseEnrollment = typeof courseEnrollments.$inferSelect;
+
+// Content Progress schema (tracks progress through individual content items)
+export const contentProgress = pgTable("content_progress", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  contentItemId: integer("content_item_id").notNull().references(() => courseContentItems.id),
+  status: varchar("status", { length: 20 }).default("not_started").notNull(), // 'not_started', 'in_progress', 'completed'
+  progress: integer("progress").default(0).notNull(), // percentage
+  score: integer("score"), // for quizzes and assignments
+  attemptCount: integer("attempt_count").default(0).notNull(),
+  lastAttemptDate: timestamp("last_attempt_date"),
+  completionDate: timestamp("completion_date"),
+  timeSpent: integer("time_spent").default(0), // in seconds
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    unq: unique().on(table.userId, table.contentItemId)
+  }
+});
+
+export const insertContentProgressSchema = createInsertSchema(contentProgress).pick({
+  userId: true,
+  contentItemId: true,
+  status: true,
+  progress: true,
+  score: true,
+  attemptCount: true,
+  timeSpent: true,
+  notes: true,
+});
+
+export type InsertContentProgress = z.infer<typeof insertContentProgressSchema>;
+export type ContentProgress = typeof contentProgress.$inferSelect;
+
+// Certificates schema
+export const certificates = pgTable("certificates", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  courseId: integer("course_id").references(() => courses.id),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  issueDate: timestamp("issue_date").defaultNow().notNull(),
+  expiryDate: timestamp("expiry_date"),
+  certificateUrl: text("certificate_url").notNull(),
+  verificationCode: varchar("verification_code", { length: 50 }).notNull().unique(),
+  metadata: jsonb("metadata"), // Additional certificate data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCertificateSchema = createInsertSchema(certificates).pick({
+  userId: true,
+  courseId: true,
+  title: true,
+  description: true,
+  issueDate: true,
+  expiryDate: true,
+  certificateUrl: true,
+  verificationCode: true,
+  metadata: true,
+});
+
+export type InsertCertificate = z.infer<typeof insertCertificateSchema>;
+export type Certificate = typeof certificates.$inferSelect;
