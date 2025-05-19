@@ -1501,17 +1501,20 @@ export class DatabaseStorage implements IStorage {
       createTableIfMissing: true,
     });
     
-    // Initialize default user levels
-    this.initializeDefaultUserLevels();
+    // Initialize default user levels - but don't block construction if it fails
+    this.initializeDefaultUserLevels().catch(err => {
+      console.error("Failed to initialize default user levels, but continuing:", err);
+    });
   }
 
   private async initializeDefaultUserLevels() {
-    // Check if levels already exist
-    const existingLevels = await db.select().from(userLevels);
-    if (existingLevels.length > 0) return;
+    try {
+      // Check if levels already exist
+      const existingLevels = await db.select().from(userLevels);
+      if (existingLevels.length > 0) return;
 
-    // Create default user levels (1-10)
-    const defaultLevels = [
+      // Create default user levels (1-10)
+      const defaultLevels = [
       { level: 1, experienceRequired: 0, title: "Novice", description: "Just getting started", benefits: "Access to beginner roadmaps" },
       { level: 2, experienceRequired: 100, title: "Apprentice", description: "Learning the basics", benefits: "Unlock skill points" },
       { level: 3, experienceRequired: 300, title: "Journeyman", description: "Building your skills", benefits: "+1 skill point" },
@@ -1526,6 +1529,9 @@ export class DatabaseStorage implements IStorage {
 
     for (const level of defaultLevels) {
       await this.createUserLevel(level);
+    }
+    } catch (error) {
+      console.error("Error initializing default user levels:", error);
     }
   }
 

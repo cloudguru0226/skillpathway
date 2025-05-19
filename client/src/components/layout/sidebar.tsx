@@ -9,7 +9,10 @@ import {
   Users, 
   PlusCircle,
   UserCircle,
-  LogOut
+  LogOut,
+  Server,
+  GraduationCap,
+  Award
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -48,6 +51,30 @@ export function Sidebar({ className }: SidebarProps) {
       label: "My Roadmaps", 
       icon: <BookMarked className="h-5 w-5 mr-2" />,
       active: location === "/bookmarks" 
+    },
+    { 
+      href: "/labs", 
+      label: "Terraform Labs", 
+      icon: <Server className="h-5 w-5 mr-2" />,
+      active: location.startsWith("/labs") 
+    },
+    { 
+      href: "/courses", 
+      label: "Courses", 
+      icon: <GraduationCap className="h-5 w-5 mr-2" />,
+      active: location.startsWith("/courses") 
+    },
+    { 
+      href: "/certificates", 
+      label: "Certificates", 
+      icon: <Award className="h-5 w-5 mr-2" />,
+      active: location === "/certificates" 
+    },
+    { 
+      href: "/community", 
+      label: "Community", 
+      icon: <Users className="h-5 w-5 mr-2" />,
+      active: location === "/community" 
     },
   ];
 
