@@ -13,7 +13,23 @@ import {
   insertDiscussionReplySchema,
   insertResourceSchema,
   insertRoadmapNodeResourceSchema,
-  insertCommentReactionSchema
+  insertCommentReactionSchema,
+  // New schemas for Terraform lab integration
+  insertLabEnvironmentSchema,
+  insertLabInstanceSchema,
+  insertLabTaskSchema,
+  insertUserLabTaskProgressSchema,
+  insertLabResourceSchema,
+  // New schemas for LMS enhancements
+  insertCourseSchema,
+  insertCourseModuleSchema,
+  insertCourseContentItemSchema,
+  insertCourseEnrollmentSchema,
+  insertContentProgressSchema,
+  insertCertificateSchema,
+  // RBAC schemas
+  insertRoleSchema,
+  insertUserRoleSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
