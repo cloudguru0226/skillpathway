@@ -93,7 +93,7 @@ const RoadmapDetailPage = () => {
     if (currentNode.completed) {
       // From completed → not started
       nextState = { completed: false, inProgress: false };
-      action = 'reset'; // Custom action to reset the node
+      action = 'incomplete'; // Use 'incomplete' for both in-progress and not-started
     } else if (currentNode.inProgress) {
       // From in progress → completed
       nextState = { completed: true, inProgress: false };
