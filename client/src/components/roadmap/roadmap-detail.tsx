@@ -100,9 +100,11 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   }, [progressArray]);
   
   // Get the currently selected node details
-  const selectedNode = selectedNodeIndex !== null && roadmap && roadmap.content && roadmap.content.sections && 
+  const selectedNode = (selectedNodeIndex !== null && selectedNodeIndex >= 0) && roadmap && roadmap.content && roadmap.content.sections && 
     roadmap.content.sections[currentSectionIndex] && roadmap.content.sections[currentSectionIndex].nodes ? 
     roadmap.content.sections[currentSectionIndex].nodes[selectedNodeIndex] : null;
+  
+  console.log("Final selected node:", selectedNode);
   
   // Fetch resources for selected node
   const nodeId = selectedNode ? encodeURIComponent(selectedNode.title) : null;
@@ -202,13 +204,13 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
     },
   });
 
-  // Handle node click to toggle completion status and show details
+  // Handle node click to select it and update its status
   const handleNodeClick = (sectionIndex: number, nodeIndex: number) => {
     if (!roadmap || !roadmap.content) return;
     
-    console.log("Node clicked:", nodeIndex);
+    console.log("Node clicked with nodeIndex:", nodeIndex);
     
-    // Always set the selected node index to show details
+    // Set the selected node index
     setSelectedNodeIndex(nodeIndex);
     
     // Deep clone the roadmap content
@@ -216,7 +218,7 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
     const node = updatedContent.sections[sectionIndex].nodes[nodeIndex];
     const nodeId = encodeURIComponent(node.title); // Use title as node ID
     
-    // Set node status - if node detail view was closed, just mark as in progress
+    // Set node status based on current state
     let action: 'complete' | 'incomplete' = 'incomplete';
     
     // If node was already completed, reset it to in-progress
@@ -286,6 +288,12 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
       setSelectedNodeIndex(null);
       window.scrollTo(0, 0);
     }
+  };
+  
+  // Force reselect a node - this fixes the issue with selection not persisting
+  const forceSelectNode = (sectionIndex: number, nodeIndex: number) => {
+    if (!roadmap || !roadmap.content || !roadmap.content.sections[sectionIndex]) return;
+    setSelectedNodeIndex(nodeIndex);
   };
 
   if (isLoading) {
@@ -405,7 +413,9 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
                     description={roadmap.content.sections[currentSectionIndex].description}
                     nodes={roadmap.content.sections[currentSectionIndex].nodes || []}
                     onNodeClick={(nodeIndex) => {
+                      console.log("Node clicked via section, index:", nodeIndex);
                       handleNodeClick(currentSectionIndex, nodeIndex);
+                      forceSelectNode(currentSectionIndex, nodeIndex);
                     }}
                     selectedNodeIndex={selectedNodeIndex}
                   />
