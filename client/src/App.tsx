@@ -14,6 +14,7 @@ import AdminPage from "@/pages/admin-page";
 import UserProfile from "@/pages/user-profile";
 import CommunityPage from "@/pages/community-page";
 import GuidesPage from "@/pages/guides-page";
+import { Navbar } from "@/components/layout/navbar";
 
 // Labs and Courses pages
 import LabsPage from "@/pages/labs/labs-page";
@@ -56,8 +57,14 @@ function App() {
       <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
         <AuthProvider>
           <TooltipProvider>
+            <div className="min-h-screen flex flex-col">
+              {/* Include the Navbar component */}
+              <Navbar />
+              <main className="flex-1">
+                <Router />
+              </main>
+            </div>
             <Toaster />
-            <Router />
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>
