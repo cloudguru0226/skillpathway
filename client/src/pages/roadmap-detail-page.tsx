@@ -88,38 +88,9 @@ const RoadmapDetailPage = () => {
       if (!res.ok) throw new Error('Failed to update progress');
       return res.json();
     })
-    .then(() => {
-      // Update local progress data
-      fetch('/api/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: 1,
-          roadmapId: parseInt(id || '1'),
-          progress: {
-            sections: roadmap.content.sections.map((section: any, sIdx: number) => {
-              if (sIdx === sectionIndex) {
-                return {
-                  ...section,
-                  nodes: section.nodes.map((n: any) => {
-                    if (n.title === topicTitle) {
-                      if (n.completed) {
-                        return { ...n, completed: false, inProgress: true };
-                      } else if (n.inProgress) {
-                        return { ...n, completed: true, inProgress: false };
-                      } else {
-                        return { ...n, inProgress: true };
-                      }
-                    }
-                    return n;
-                  })
-                };
-              }
-              return section;
-            })
-          }
-        })
-      });
+    .then((data) => {
+      // Success - refresh the page to show updated progress
+      window.location.reload();
     })
     .catch(err => {
       console.error("Error updating progress:", err);
