@@ -124,6 +124,7 @@ export interface IStorage {
   }>;
 
   // User methods
+  getUsers(): Promise<User[]>;
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;

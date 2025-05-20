@@ -98,6 +98,14 @@ export function Navbar() {
                     Profile
                   </DropdownMenuItem>
                 </Link>
+                {user.isAdmin && (
+                  <Link href="/admin">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                  </Link>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />

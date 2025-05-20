@@ -1,18 +1,20 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { User } from "@shared/schema";
-import { queryClient } from "../lib/queryClient";
-import { useToast } from "./use-toast";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
-// Define types for the admin API responses
-export type UserDetails = {
-  user: User;
-  progress: any[];
-  roles: any[];
-  experience: any;
-  badges: any[];
-};
+// Types for admin dashboard
+export interface PlatformStats {
+  totalUsers: number;
+  activeUsers: number;
+  totalRoadmaps: number;
+  totalCourses?: number;
+  totalLabEnvironments?: number;
+  activeLabInstances?: number;
+  totalComments: number;
+  totalDiscussions: number;
+  averageCompletionRate: number;
+}
 
-export type UserProgressReport = {
+export interface UserProgressReport {
   userId: number;
   username: string;
   email: string;
@@ -24,177 +26,89 @@ export type UserProgressReport = {
     totalNodes: number;
     lastAccessedAt: string;
   }[];
-};
+}
 
-export type LearningVelocity = {
+export interface LearningVelocity {
   users: {
     userId: number;
     username: string;
     avgNodesPerWeek: number;
-    lastActive: Date;
+    lastActive: string;
   }[];
   overall: {
     period: string;
     average: number;
   }[];
-};
+}
 
-export type PlatformStats = {
-  totalUsers: number;
-  totalRoadmaps: number;
-  activeUsers: number;
-  totalComments: number;
-  totalDiscussions: number;
-  averageCompletionRate: number;
-  totalCourses?: number;
-  totalLabEnvironments?: number;
-  activeLabInstances?: number;
-};
-
-// Admin hooks for managing users and getting reports
+// Get all users for admin
 export function useAdminUsers() {
   return useQuery({
-    queryKey: ["/api/admin/users"],
-    enabled: false, // Don't auto-fetch, we'll fetch when the admin page loads
+    queryKey: ['/api/admin/users'],
+    enabled: false, // Don't fetch automatically on component mount
   });
 }
 
-export function useAdminUserDetails(userId: number) {
-  return useQuery({
-    queryKey: ["/api/admin/users", userId],
-    enabled: !!userId, // Only fetch when userId is provided
+// Get platform stats for admin dashboard
+export function usePlatformStats() {
+  return useQuery<PlatformStats>({
+    queryKey: ['/api/admin/stats'],
+    enabled: false, // Don't fetch automatically on component mount
   });
 }
 
+// Get user progress report
+export function useUserProgressReport() {
+  return useQuery<UserProgressReport[]>({
+    queryKey: ['/api/admin/reports/progress'],
+    enabled: false, // Don't fetch automatically on component mount
+  });
+}
+
+// Get learning velocity report
+export function useLearningVelocityReport() {
+  return useQuery<LearningVelocity>({
+    queryKey: ['/api/admin/reports/velocity'],
+    enabled: false, // Don't fetch automatically on component mount
+  });
+}
+
+// Create a new user (admin only)
 export function useCreateUser() {
-  const { toast } = useToast();
-  
   return useMutation({
-    mutationFn: async (userData: Partial<User>) => {
-      const response = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create user");
-      }
-      
-      return response.json();
+    mutationFn: async (userData: any) => {
+      const res = await apiRequest("POST", "/api/admin/users", userData);
+      return await res.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "User created successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
     },
   });
 }
 
+// Update an existing user (admin only)
 export function useUpdateUser() {
-  const { toast } = useToast();
-  
   return useMutation({
-    mutationFn: async ({ userId, userData }: { userId: number; userData: Partial<User> }) => {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update user");
-      }
-      
-      return response.json();
+    mutationFn: async ({ userId, userData }: { userId: number, userData: any }) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${userId}`, userData);
+      return await res.json();
     },
-    onSuccess: (_, variables) => {
-      toast({
-        title: "Success",
-        description: "User updated successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", variables.userId] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
     },
   });
 }
 
+// Assign a roadmap to a user
 export function useAssignRoadmap() {
-  const { toast } = useToast();
-  
   return useMutation({
-    mutationFn: async ({ userId, roadmapId }: { userId: number; roadmapId: number }) => {
-      const response = await fetch(`/api/admin/users/${userId}/roadmaps`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ roadmapId }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to assign roadmap");
-      }
-      
-      return response.json();
+    mutationFn: async ({ userId, roadmapId }: { userId: number, roadmapId: number }) => {
+      const res = await apiRequest("POST", "/api/admin/assign-roadmap", { userId, roadmapId });
+      return await res.json();
     },
-    onSuccess: (_, variables) => {
-      toast({
-        title: "Success",
-        description: "Roadmap assigned successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", variables.userId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/progress'] });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-}
-
-export function useUserProgressReport() {
-  return useQuery({
-    queryKey: ["/api/admin/reports/user-progress"],
-    enabled: false, // Don't auto-fetch
-  });
-}
-
-export function useLearningVelocityReport(days: number = 30) {
-  return useQuery({
-    queryKey: ["/api/admin/reports/learning-velocity", days],
-    enabled: false, // Don't auto-fetch
-  });
-}
-
-export function usePlatformStats() {
-  return useQuery({
-    queryKey: ["/api/admin/stats"],
-    enabled: false, // Don't auto-fetch
   });
 }
