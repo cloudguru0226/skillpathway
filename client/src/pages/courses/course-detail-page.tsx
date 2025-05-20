@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { BackButton } from "@/components/navigation/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -89,6 +90,7 @@ type Enrollment = {
 };
 
 export default function CourseDetailPage() {
+  const [, navigate] = useLocation();
   const params = useParams<{ id: string }>();
   const courseId = parseInt(params.id);
   const { toast } = useToast();
