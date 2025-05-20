@@ -22,8 +22,17 @@ export default function AdminPage() {
     );
   }
   
-  if (!user || user.role !== "admin") {
-    navigate("/");
+  // Check if user exists
+  if (!user) {
+    return null;
+  }
+  
+  // If not admin, redirect to home
+  if (!user.isAdmin) {
+    // Use setTimeout to avoid state update during render
+    setTimeout(() => {
+      navigate("/");
+    }, 0);
     return null;
   }
   
