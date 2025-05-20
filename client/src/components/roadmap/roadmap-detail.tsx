@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Loader2, BookOpen, MessageSquare, FileText, Users, 
-  Plus, Book, Database 
+  Plus, Book, Database, Clock, Check
 } from "lucide-react";
 import { CommentsSection } from "../community/comments-section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -435,13 +435,13 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
                       </div>
                       <div className="bg-background p-3 rounded-lg border border-blue-500">
                         <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mx-auto mb-2">
-                          <Clock3 className="h-3.5 w-3.5 text-white" />
+                          <Clock className="h-3.5 w-3.5 text-white" />
                         </div>
                         <p className="text-xs text-center">In Progress</p>
                       </div>
                       <div className="bg-background p-3 rounded-lg border border-primary">
                         <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center mx-auto mb-2">
-                          <CheckIcon className="h-3.5 w-3.5 text-white" />
+                          <Check className="h-3.5 w-3.5 text-white" />
                         </div>
                         <p className="text-xs text-center">Completed</p>
                       </div>
