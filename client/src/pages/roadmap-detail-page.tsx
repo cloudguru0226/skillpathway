@@ -72,45 +72,71 @@ const RoadmapDetailPage = () => {
     const node = currentSection.nodes.find((n: any) => n.title === topicTitle);
     if (!node) return;
     
-    // Determine what action to take based on current state
-    let action = 'incomplete';
-    if (node.completed) {
-      action = 'incomplete';
-    } else if (node.inProgress) {
-      action = 'complete';
-    }
-    
-    // Update local UI state immediately, but don't save on the server yet
-    // Here we're implementing a simplified progress update
-    const updatedNodes = currentSection.nodes.map((n: any) => {
-      if (n.title === topicTitle) {
-        if (n.completed) {
-          return { ...n, completed: false, inProgress: true };
-        } else if (n.inProgress) {
-          return { ...n, completed: true, inProgress: false };
-        } else {
-          return { ...n, inProgress: true };
-        }
-      }
-      return n;
-    });
-    
-    // Update the progress with a simple POST that doesn't expect JSON back
-    fetch(`/api/roadmaps/${id}/progress/${encodeURIComponent(topicTitle)}/${action}`, {
-      method: 'POST'
-    })
-    .then(res => {
-      if (!res.ok) throw new Error('Failed to update progress');
-      // Don't try to parse JSON - some endpoints return empty responses
+    if (!node.isUpdating) { // Prevent double-clicks while updating
+      // Update local state to reflect the change immediately
+      // This creates a better user experience than refreshing the page
+      const newSections = [...roadmap.content.sections];
+      const updatedNodes = [...currentSection.nodes];
       
-      // After a short delay, reload the page to refresh all data
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-    })
-    .catch(err => {
-      console.error("Error updating progress:", err);
-    });
+      // Find the node index
+      const nodeIndex = updatedNodes.findIndex((n: any) => n.title === topicTitle);
+      
+      if (nodeIndex !== -1) {
+        // Determine new status and action based on current state
+        let action = 'incomplete';
+        let newNode;
+        
+        if (node.completed) {
+          // If completed, change to in-progress
+          newNode = { ...node, completed: false, inProgress: true, isUpdating: true };
+          action = 'incomplete';
+        } else if (node.inProgress) {
+          // If in-progress, change to completed
+          newNode = { ...node, completed: true, inProgress: false, isUpdating: true };
+          action = 'complete';
+        } else {
+          // If not started, change to in-progress
+          newNode = { ...node, inProgress: true, isUpdating: true };
+          action = 'incomplete';
+        }
+        
+        // Update the node in our local state
+        updatedNodes[nodeIndex] = newNode;
+        newSections[sectionIndex] = { ...currentSection, nodes: updatedNodes };
+        
+        // Update roadmap in component state (using any to bypass type checking here)
+        (roadmap as any).content.sections = newSections;
+        
+        // Update the progress on the server
+        fetch(`/api/roadmaps/${id}/progress/${encodeURIComponent(topicTitle)}/${action}`, {
+          method: 'POST'
+        })
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to update progress');
+          
+          // After server responds, update UI to show the change is complete
+          setTimeout(() => {
+            const finalNodes = [...updatedNodes];
+            finalNodes[nodeIndex] = { ...newNode, isUpdating: false };
+            
+            newSections[sectionIndex] = { ...currentSection, nodes: finalNodes };
+            (roadmap as any).content.sections = newSections;
+            
+            // Force component re-render
+            setSelectedTopic(topicTitle);
+          }, 300);
+        })
+        .catch(err => {
+          console.error("Error updating progress:", err);
+          
+          // Revert the UI if there was an error
+          setTimeout(() => {
+            (roadmap as any).content.sections = roadmap.content.sections;
+            setSelectedTopic(topicTitle);
+          }, 300);
+        });
+      }
+    }
   };
   
   // Calculate overall progress
