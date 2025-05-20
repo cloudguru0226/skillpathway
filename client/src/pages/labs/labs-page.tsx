@@ -70,18 +70,7 @@ export default function LabsPage() {
     queryKey: ["/api/labs"],
     queryFn: async () => {
       // During development with fallback, return mock data
-      if (process.env.NODE_ENV === "development") {
-        return mockLabEnvironments;
-      }
-      
-      try {
-        const res = await fetch('/api/labs');
-        if (!res.ok) throw new Error('Failed to fetch lab environments');
-        return await res.json() as LabEnvironment[];
-      } catch (err) {
-        console.error("Error fetching lab environments:", err);
-        throw err;
-      }
+      return mockLabEnvironments;
     }
   });
 
@@ -90,29 +79,18 @@ export default function LabsPage() {
     queryKey: ["/api/lab-instances"],
     queryFn: async () => {
       // Mock data for development
-      if (process.env.NODE_ENV === "development") {
-        return mockLabInstances;
-      }
-      
-      try {
-        const res = await fetch('/api/lab-instances');
-        if (!res.ok) throw new Error('Failed to fetch lab history');
-        return await res.json() as LabInstance[];
-      } catch (err) {
-        console.error("Error fetching lab history:", err);
-        return [];
-      }
+      return mockLabInstances;
     },
     enabled: !!user,
   });
   
   // Filter labs by difficulty and search term
-  const filteredLabs = labs?.filter(lab => {
+  const filteredLabs = labs?.filter((lab: LabEnvironment) => {
     const difficultyMatches = difficulty === "all" || lab.difficulty === difficulty;
     const searchMatches = 
       lab.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       lab.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lab.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      lab.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     return difficultyMatches && searchMatches;
   });
   
@@ -181,18 +159,18 @@ export default function LabsPage() {
   }
   
   // Get active lab instances (in progress)
-  const activeLabs = labHistory?.filter(instance => 
+  const activeLabs = labHistory?.filter((instance: LabInstance) => 
     instance.status === 'active'
   ) || [];
   
   // Get completed lab instances
-  const completedLabs = labHistory?.filter(instance => 
+  const completedLabs = labHistory?.filter((instance: LabInstance) => 
     instance.status === 'completed'
   ) || [];
   
   // Match lab instances with lab details
   const getLabDetails = (labId: number) => {
-    return labs?.find(lab => lab.id === labId) || null;
+    return labs?.find((lab: LabEnvironment) => lab.id === labId) || null;
   };
   
   return (
@@ -212,7 +190,7 @@ export default function LabsPage() {
             <div className="mb-6">
               <h3 className="text-lg font-medium mb-3">In Progress</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {activeLabs.map((instance) => {
+                {activeLabs.map((instance: LabInstance) => {
                   const labDetails = getLabDetails(instance.labId);
                   if (!labDetails) return null;
                   
@@ -260,7 +238,7 @@ export default function LabsPage() {
             <div>
               <h3 className="text-lg font-medium mb-3">Completed</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {completedLabs.slice(0, 3).map((instance) => {
+                {completedLabs.slice(0, 3).map((instance: LabInstance) => {
                   const labDetails = getLabDetails(instance.labId);
                   if (!labDetails) return null;
                   
@@ -357,9 +335,9 @@ export default function LabsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredLabs?.map(lab => {
+            {filteredLabs?.map((lab: LabEnvironment) => {
               // Check if user has an instance of this lab
-              const labInstance = labHistory?.find(instance => instance.labId === lab.id);
+              const labInstance = labHistory?.find((instance: LabInstance) => instance.labId === lab.id);
               const isInProgress = labInstance?.status === 'active';
               const isCompleted = labInstance?.status === 'completed';
               
@@ -397,7 +375,7 @@ export default function LabsPage() {
                   </CardHeader>
                   <CardContent className="flex-grow">
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {lab.tags.map(tag => (
+                      {lab.tags.map((tag: string) => (
                         <Badge key={tag} variant="outline" className="text-xs">
                           {tag}
                         </Badge>
@@ -529,5 +507,46 @@ const mockLabEnvironments: LabEnvironment[] = [
     isActive: true,
     terraformVersion: "1.5.0",
     providerName: "GCP"
+  }
+];
+
+// Mock lab instance data for development
+const mockLabInstances: LabInstance[] = [
+  {
+    id: 1,
+    userId: 1,
+    labId: 1,
+    status: 'active',
+    createdAt: '2023-07-10T14:30:00Z',
+    updatedAt: '2023-07-12T16:45:00Z',
+    progress: 65,
+    lastAccessedAt: '2023-07-12T16:45:00Z',
+    resources: [
+      { type: 'document', url: '/resources/labs/1/setup-guide.pdf' },
+      { type: 'code', url: '/resources/labs/1/terraform-files.zip' }
+    ]
+  },
+  {
+    id: 2,
+    userId: 1,
+    labId: 3,
+    status: 'completed',
+    createdAt: '2023-06-05T09:20:00Z',
+    updatedAt: '2023-06-06T11:15:00Z',
+    completionDate: '2023-06-06T11:15:00Z',
+    progress: 100,
+    lastAccessedAt: '2023-06-06T11:15:00Z',
+    notes: 'Successfully deployed serverless function with Pub/Sub triggers'
+  },
+  {
+    id: 3,
+    userId: 1,
+    labId: 5,
+    status: 'completed',
+    createdAt: '2023-05-28T13:10:00Z',
+    updatedAt: '2023-05-29T15:40:00Z',
+    completionDate: '2023-05-29T15:40:00Z',
+    progress: 100,
+    lastAccessedAt: '2023-05-29T15:40:00Z'
   }
 ];
