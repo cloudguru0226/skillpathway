@@ -1,5 +1,5 @@
 import { Header } from "@/components/layout/header";
-import { RoadmapDetail } from "@/components/roadmap/roadmap-detail";
+import { RoadmapDetail } from "@/components/roadmap/roadmap-detail-fixed";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 
