@@ -202,12 +202,20 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
     },
   });
 
-  // Handle node click to toggle completion status
+  // Handle node click to toggle completion status and show details
   const handleNodeClick = (sectionIndex: number, nodeIndex: number) => {
     if (!roadmap || !roadmap.content) return;
     
-    // Always select the node for detailed view - don't toggle off
-    setSelectedNodeIndex(nodeIndex);
+    console.log("Node clicked:", nodeIndex);
+    
+    // Set the selected node index - this shows the details panel
+    if (selectedNodeIndex === nodeIndex) {
+      // If the same node is clicked twice, don't toggle off, keep it selected
+      console.log("Same node clicked, keeping selected");
+    } else {
+      console.log("New node selected:", nodeIndex);
+      setSelectedNodeIndex(nodeIndex);
+    }
     
     // Deep clone the roadmap content
     const updatedContent = JSON.parse(JSON.stringify(roadmap.content));
