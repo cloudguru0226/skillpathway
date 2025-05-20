@@ -100,8 +100,9 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   }, [progressArray]);
   
   // Get the currently selected node details
-  const selectedNode = selectedNodeIndex !== null && roadmap ? 
-    roadmap.content.sections[currentSectionIndex]?.nodes[selectedNodeIndex] : null;
+  const selectedNode = selectedNodeIndex !== null && roadmap && roadmap.content && roadmap.content.sections && 
+    roadmap.content.sections[currentSectionIndex] && roadmap.content.sections[currentSectionIndex].nodes ? 
+    roadmap.content.sections[currentSectionIndex].nodes[selectedNodeIndex] : null;
   
   // Fetch resources for selected node
   const nodeId = selectedNode ? encodeURIComponent(selectedNode.title) : null;
@@ -139,6 +140,16 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   };
 
   const progressPercentage = calculateProgress();
+  
+  // Debug logging to help troubleshoot issues
+  console.log("Current section index:", currentSectionIndex);
+  console.log("Selected node index:", selectedNodeIndex);
+  if (roadmap && roadmap.content) {
+    console.log("Current section:", roadmap.content.sections[currentSectionIndex]);
+  }
+  if (selectedNodeIndex !== null && roadmap && roadmap.content) {
+    console.log("Selected node:", roadmap.content.sections[currentSectionIndex]?.nodes[selectedNodeIndex]);
+  }
 
   // Update progress mutation
   const updateProgressMutation = useMutation({
@@ -195,13 +206,8 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   const handleNodeClick = (sectionIndex: number, nodeIndex: number) => {
     if (!roadmap || !roadmap.content) return;
     
-    // Keep the node selected for detailed view
-    setSelectedNodeIndex(prev => prev === nodeIndex ? null : nodeIndex);
-    
-    // Return early if we're just closing the node detail view
-    if (selectedNodeIndex === nodeIndex) {
-      return;
-    }
+    // Always select the node for detailed view - don't toggle off
+    setSelectedNodeIndex(nodeIndex);
     
     // Deep clone the roadmap content
     const updatedContent = JSON.parse(JSON.stringify(roadmap.content));
@@ -404,8 +410,9 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
                 )}
               </div>
               
-              {selectedNode && (
-                <div className="bg-card rounded-lg p-4 border border-border">
+              {/* Always render the right panel, but conditionally show node details or a message */}
+              <div className="bg-card rounded-lg p-4 border border-border">
+                {selectedNode ? (
                   <NodeDetails 
                     node={selectedNode} 
                     sectionTitle={roadmap.content.sections[currentSectionIndex]?.title || ''} 
@@ -413,8 +420,35 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
                     roadmapTitle={roadmap.title}
                     nodeId={encodeURIComponent(selectedNode.title)}
                   />
-                </div>
-              )}
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full py-8 text-center">
+                    <h3 className="text-xl font-bold mb-4">Start Your Learning Journey</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm">
+                      Click on any topic in the roadmap to view more details, track your progress, and access learning resources.
+                    </p>
+                    <div className="grid grid-cols-3 gap-4 w-full max-w-md">
+                      <div className="bg-background p-3 rounded-lg border border-border">
+                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mx-auto mb-2">
+                          <span className="text-xs font-medium">1</span>
+                        </div>
+                        <p className="text-xs text-center">Not Started</p>
+                      </div>
+                      <div className="bg-background p-3 rounded-lg border border-blue-500">
+                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mx-auto mb-2">
+                          <Clock3 className="h-3.5 w-3.5 text-white" />
+                        </div>
+                        <p className="text-xs text-center">In Progress</p>
+                      </div>
+                      <div className="bg-background p-3 rounded-lg border border-primary">
+                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center mx-auto mb-2">
+                          <CheckIcon className="h-3.5 w-3.5 text-white" />
+                        </div>
+                        <p className="text-xs text-center">Completed</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
           
