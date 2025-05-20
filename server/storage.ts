@@ -974,7 +974,7 @@ export class DatabaseStorage implements IStorage {
     
     const activeUsersQuery = await db.select({ userId: schema.activityLogs.userId })
       .from(schema.activityLogs)
-      .where(gt(schema.activityLogs.timestamp, lastWeek))
+      .where(sql`${schema.activityLogs.timestamp} > ${lastWeek}`)
       .groupBy(schema.activityLogs.userId);
     
     const activeUsers = activeUsersQuery.length;
