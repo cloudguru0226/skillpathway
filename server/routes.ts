@@ -46,6 +46,263 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // ============================================================================
+  // ADMIN API ROUTES
+  // ============================================================================
+
+  // Get all users (admin only)
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      return res.status(200).json(users);
+    } catch (error) {
+      console.error("Error getting users:", error);
+      return res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+
+  // Get user details (admin only)
+  app.get("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get additional user information
+      const progress = await storage.getUserProgress(userId);
+      const roles = await storage.getUserRoles(userId);
+      const experience = await storage.getUserExperience(userId);
+      const badges = await storage.getUserBadges(userId);
+      
+      return res.status(200).json({
+        user,
+        progress,
+        roles,
+        experience,
+        badges
+      });
+    } catch (error) {
+      console.error("Error getting user details:", error);
+      return res.status(500).json({ message: "Failed to get user details" });
+    }
+  });
+
+  // Create a new user (admin only)
+  app.post("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if username or email already exists
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      const existingEmail = await storage.getUserByEmail(userData.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+      
+      // Hash the password
+      const hashedPassword = await hashPassword(userData.password);
+      
+      // Create user
+      const user = await storage.createUser({
+        ...userData,
+        password: hashedPassword
+      });
+      
+      return res.status(201).json(user);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user data", errors: error.errors });
+      }
+      console.error("Error creating user:", error);
+      return res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Update user (admin only)
+  app.put("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const userData = req.body;
+      
+      // If password is provided, hash it
+      if (userData.password) {
+        userData.password = await hashPassword(userData.password);
+      }
+      
+      const updatedUser = await storage.updateUser(userId, userData);
+      return res.status(200).json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      return res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Assign roadmap to user (admin only)
+  app.post("/api/admin/users/:id/roadmaps", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const roadmapId = parseInt(req.body.roadmapId);
+      
+      if (isNaN(userId) || isNaN(roadmapId)) {
+        return res.status(400).json({ message: "Invalid user ID or roadmap ID" });
+      }
+      
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check if roadmap exists
+      const roadmap = await storage.getRoadmap(roadmapId);
+      if (!roadmap) {
+        return res.status(404).json({ message: "Roadmap not found" });
+      }
+      
+      // Check if user already has this roadmap
+      const existingProgress = await storage.getUserProgress(userId, roadmapId);
+      if (existingProgress.length > 0) {
+        return res.status(409).json({ message: "User already has this roadmap assigned" });
+      }
+      
+      // Create initial progress entry
+      const progress = await storage.createUserProgress({
+        userId,
+        roadmapId,
+        progress: {
+          sections: roadmap.content.sections.map((section: any) => ({
+            ...section,
+            nodes: section.nodes.map((node: any) => ({
+              ...node,
+              completed: false,
+              inProgress: false
+            }))
+          }))
+        }
+      });
+      
+      // Log activity
+      await storage.createActivityLog({
+        userId,
+        roadmapId,
+        action: 'roadmap_assigned',
+        details: { assignedBy: req.user.id },
+        timestamp: new Date(),
+        duration: 0
+      });
+      
+      return res.status(201).json({ message: "Roadmap assigned successfully", progress });
+    } catch (error) {
+      console.error("Error assigning roadmap:", error);
+      return res.status(500).json({ message: "Failed to assign roadmap" });
+    }
+  });
+
+  // Generate user progress report (admin only)
+  app.get("/api/admin/reports/user-progress", requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      const roadmaps = await storage.getRoadmaps();
+      
+      const report = await Promise.all(
+        users.map(async (user) => {
+          const progress = await storage.getUserProgress(user.id);
+          
+          // Calculate completion percentages for each roadmap
+          const roadmapProgress = progress.map((p) => {
+            const roadmap = roadmaps.find(r => r.id === p.roadmapId);
+            if (!roadmap) return null;
+            
+            const progressData = p.progress;
+            
+            // Count total and completed nodes
+            let totalNodes = 0;
+            let completedNodes = 0;
+            
+            if (progressData.sections) {
+              progressData.sections.forEach((section: any) => {
+                if (section.nodes) {
+                  totalNodes += section.nodes.length;
+                  completedNodes += section.nodes.filter((n: any) => n.completed).length;
+                }
+              });
+            }
+            
+            const completionPercentage = totalNodes > 0 
+              ? Math.round((completedNodes / totalNodes) * 100) 
+              : 0;
+              
+            return {
+              roadmapId: p.roadmapId,
+              roadmapTitle: roadmap.title,
+              completionPercentage,
+              completedNodes,
+              totalNodes,
+              lastAccessedAt: p.lastAccessedAt
+            };
+          }).filter(Boolean);
+          
+          return {
+            userId: user.id,
+            username: user.username,
+            email: user.email,
+            roadmapProgress
+          };
+        })
+      );
+      
+      return res.status(200).json(report);
+    } catch (error) {
+      console.error("Error generating user progress report:", error);
+      return res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
+  // Get learning velocity report - measures how quickly users are progressing (admin only)
+  app.get("/api/admin/reports/learning-velocity", requireAdmin, async (req, res) => {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      
+      // Get user progress data
+      const velocityData = await storage.getLearningVelocity();
+      
+      return res.status(200).json(velocityData);
+    } catch (error) {
+      console.error("Error generating learning velocity report:", error);
+      return res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
+  // Get platform statistics (admin only)
+  app.get("/api/admin/stats", requireAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getPlatformStats();
+      return res.status(200).json(stats);
+    } catch (error) {
+      console.error("Error getting platform stats:", error);
+      return res.status(500).json({ message: "Failed to get platform statistics" });
+    }
+  });
+
   // Special endpoint for seeding roadmaps (for development purposes)
   app.post("/api/seed-roadmaps", async (req, res) => {
     try {

@@ -37,7 +37,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Import admin seed creation function
+  const { createAdminUserIfNotExists } = await import('./admin-seed');
+  
   const server = await registerRoutes(app);
+  
+  // Create admin user for demonstration
+  await createAdminUserIfNotExists();
+  console.log('Admin user setup completed. Use username: admin, password: admin123');
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
