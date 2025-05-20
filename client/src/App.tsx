@@ -15,6 +15,8 @@ import UserProfile from "@/pages/user-profile";
 import CommunityPage from "@/pages/community-page";
 import GuidesPage from "@/pages/guides-page";
 import { Navbar } from "@/components/layout/navbar";
+import FixedRoadmap from "@/pages/fixed-roadmap";
+import TestRoadmap from "@/pages/test-roadmap";
 
 // Labs and Courses pages
 import LabsPage from "@/pages/labs/labs-page";
@@ -30,6 +32,8 @@ function Router() {
       <ProtectedRoute path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/roadmaps" component={HomePage} />
+      <Route path="/fixed-roadmap" component={FixedRoadmap} />
+      <Route path="/test-roadmap" component={TestRoadmap} />
       <ProtectedRoute path="/roadmap/:id" component={RoadmapDetailPage} />
       <ProtectedRoute path="/admin" component={AdminPage} />
       <ProtectedRoute path="/profile" component={UserProfile} />
