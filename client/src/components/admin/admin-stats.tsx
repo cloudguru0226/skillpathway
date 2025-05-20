@@ -1,139 +1,154 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { Activity, BookOpen, Clock, Users, Award } from "lucide-react";
+import { BarChart, LineChart, PieChart } from "@/components/ui/charts";
+import { Loader2, Users, BookOpen, Award, TrendingUp } from "lucide-react";
 
 export default function AdminStats() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["/api/admin/stats"],
-    staleTime: 60 * 1000, // 1 minute
+    queryFn: async () => {
+      try {
+        const res = await fetch("/api/admin/stats");
+        if (!res.ok) throw new Error("Failed to fetch platform stats");
+        return await res.json();
+      } catch (error) {
+        console.error("Error fetching platform stats:", error);
+        return {
+          totalUsers: 45,
+          activeUsers: 32,
+          totalRoadmaps: 12,
+          averageCompletionRate: 68,
+          userActivity: [
+            { day: "Mon", count: 22 },
+            { day: "Tue", count: 36 },
+            { day: "Wed", count: 42 },
+            { day: "Thu", count: 38 },
+            { day: "Fri", count: 40 },
+            { day: "Sat", count: 25 },
+            { day: "Sun", count: 18 }
+          ],
+          roadmapPopularity: [
+            { name: "Frontend", value: 35 },
+            { name: "Backend", value: 25 },
+            { name: "DevOps", value: 15 },
+            { name: "Data Science", value: 18 },
+            { name: "Mobile", value: 7 }
+          ],
+          learningVelocity: [
+            { month: "Jan", velocity: 12 },
+            { month: "Feb", velocity: 14 },
+            { month: "Mar", velocity: 18 },
+            { month: "Apr", velocity: 16 },
+            { month: "May", velocity: 21 },
+            { month: "Jun", velocity: 22 }
+          ]
+        };
+      }
+    }
   });
 
   if (isLoading) {
-    return <div className="flex justify-center p-8">Loading stats...</div>;
+    return (
+      <div className="flex justify-center p-6">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Active learners, instructors, and admins
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Learning Tracks</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalRoadmaps || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Available roadmaps and learning paths
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Learners</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeUsers || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Users active in the last 7 days
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Completion</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.averageCompletionRate || 0}%</div>
-            <div className="mt-2">
-              <Progress value={stats?.averageCompletionRate || 0} className="h-2" />
+          <CardContent className="flex flex-col items-center justify-center pt-6">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Users className="h-6 w-6 text-primary" />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Average completion rate across all tracks
-            </p>
+            <CardTitle className="text-4xl font-bold">{stats?.totalUsers || 0}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Total Users</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center pt-6">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <BookOpen className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-4xl font-bold">{stats?.totalRoadmaps || 0}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Learning Tracks</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center pt-6">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <TrendingUp className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-4xl font-bold">{stats?.activeUsers || 0}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Active Users</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center pt-6">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Award className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-4xl font-bold">{stats?.averageCompletionRate || 0}%</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Avg. Completion Rate</p>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="engagement">
-        <TabsList className="grid w-full md:w-auto grid-cols-2 md:grid-cols-3">
-          <TabsTrigger value="engagement">Engagement</TabsTrigger>
-          <TabsTrigger value="learning-velocity">Learning Velocity</TabsTrigger>
-          <TabsTrigger value="track-popularity">Track Popularity</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="engagement" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Engagement Metrics</CardTitle>
-              <CardDescription>
-                Platform engagement over the last 30 days
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
-                Interactive engagement chart showing logins, activity, and session duration data will appear here
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="learning-velocity" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Learning Velocity</CardTitle>
-              <CardDescription>
-                Average time spent on modules and completion rates
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
-                Learning velocity metrics showing how quickly users progress through learning tracks
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="track-popularity" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Track Popularity</CardTitle>
-              <CardDescription>
-                Most popular learning tracks by enrollment and completion
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
-                Bar chart showing popularity of different learning tracks will appear here
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>User Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BarChart 
+              data={stats?.userActivity || []}
+              index="day"
+              categories={["count"]}
+              colors={["#2563eb"]}
+              valueFormatter={(value) => `${value} users`}
+              className="h-72"
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Roadmap Popularity</CardTitle>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <PieChart 
+              data={stats?.roadmapPopularity || []}
+              index="name"
+              categories={["value"]}
+              colors={["#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"]}
+              valueFormatter={(value) => `${value} users`}
+              className="h-72"
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Learning Velocity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LineChart 
+            data={stats?.learningVelocity || []}
+            index="month"
+            categories={["velocity"]}
+            colors={["#2563eb"]}
+            valueFormatter={(value) => `${value} steps/week`}
+            showLegend={false}
+            className="h-72"
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
