@@ -195,25 +195,34 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
   const handleNodeClick = (sectionIndex: number, nodeIndex: number) => {
     if (!roadmap || !roadmap.content) return;
     
-    // Select the node for detailed view
-    setSelectedNodeIndex(nodeIndex);
+    // Keep the node selected for detailed view
+    setSelectedNodeIndex(prev => prev === nodeIndex ? null : nodeIndex);
+    
+    // Return early if we're just closing the node detail view
+    if (selectedNodeIndex === nodeIndex) {
+      return;
+    }
     
     // Deep clone the roadmap content
     const updatedContent = JSON.parse(JSON.stringify(roadmap.content));
     const node = updatedContent.sections[sectionIndex].nodes[nodeIndex];
     const nodeId = encodeURIComponent(node.title); // Use title as node ID
     
-    // Toggle node status
-    let action: 'complete' | 'incomplete';
+    // Set node status - if node detail view was closed, just mark as in progress
+    let action: 'complete' | 'incomplete' = 'incomplete';
+    
+    // If node was already completed, reset it to in-progress
     if (node.completed) {
       node.completed = false;
-      node.inProgress = false;
+      node.inProgress = true;
       action = 'incomplete';
     } else if (node.inProgress) {
-      node.completed = true;
+      // If it was in progress, mark it as completed
       node.inProgress = false;
+      node.completed = true;
       action = 'complete';
     } else {
+      // Otherwise, mark it as in progress
       node.inProgress = true;
       action = 'incomplete';
     }
@@ -381,16 +390,18 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
-                <RoadmapSection
-                  key={roadmap.content.sections[currentSectionIndex]?.title}
-                  title={roadmap.content.sections[currentSectionIndex]?.title}
-                  description={roadmap.content.sections[currentSectionIndex]?.description}
-                  nodes={roadmap.content.sections[currentSectionIndex]?.nodes}
-                  onNodeClick={(nodeIndex) => {
-                    handleNodeClick(currentSectionIndex, nodeIndex);
-                  }}
-                  selectedNodeIndex={selectedNodeIndex}
-                />
+                {roadmap.content && roadmap.content.sections && roadmap.content.sections[currentSectionIndex] && (
+                  <RoadmapSection
+                    key={roadmap.content.sections[currentSectionIndex].title}
+                    title={roadmap.content.sections[currentSectionIndex].title}
+                    description={roadmap.content.sections[currentSectionIndex].description}
+                    nodes={roadmap.content.sections[currentSectionIndex].nodes || []}
+                    onNodeClick={(nodeIndex) => {
+                      handleNodeClick(currentSectionIndex, nodeIndex);
+                    }}
+                    selectedNodeIndex={selectedNodeIndex}
+                  />
+                )}
               </div>
               
               {selectedNode && (
