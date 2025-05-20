@@ -9,7 +9,7 @@ import {
   MessageSquare, Users, Clock, Plus 
 } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { RoadmapSection } from './roadmap-section';
+import { RoadmapSection } from './roadmap-section-fixed';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { NodeDetails } from './node-details';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Check, Clock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -22,19 +22,6 @@ export const RoadmapSection: React.FC<RoadmapSectionProps> = ({
   selectedNodeIndex,
   onNodeClick,
 }) => {
-  // Keep track of component's internal selected node to ensure UI stays consistent
-  const [internalSelectedIndex, setInternalSelectedIndex] = useState<number | null>(selectedNodeIndex);
-  
-  // Update internal state when props change
-  useEffect(() => {
-    setInternalSelectedIndex(selectedNodeIndex);
-  }, [selectedNodeIndex]);
-  
-  // Handle node click with UI-side state management to ensure we always show the selected node
-  const handleNodeClick = (index: number) => {
-    setInternalSelectedIndex(index);
-    onNodeClick(index);
-  };
   // Calculate section progress
   const totalNodes = nodes.length;
   const completedNodes = nodes.filter(node => node.completed).length;
