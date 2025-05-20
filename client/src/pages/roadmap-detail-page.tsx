@@ -80,17 +80,33 @@ const RoadmapDetailPage = () => {
       action = 'complete';
     }
     
-    // Make the API call to update node status
+    // Update local UI state immediately, but don't save on the server yet
+    // Here we're implementing a simplified progress update
+    const updatedNodes = currentSection.nodes.map((n: any) => {
+      if (n.title === topicTitle) {
+        if (n.completed) {
+          return { ...n, completed: false, inProgress: true };
+        } else if (n.inProgress) {
+          return { ...n, completed: true, inProgress: false };
+        } else {
+          return { ...n, inProgress: true };
+        }
+      }
+      return n;
+    });
+    
+    // Update the progress with a simple POST that doesn't expect JSON back
     fetch(`/api/roadmaps/${id}/progress/${encodeURIComponent(topicTitle)}/${action}`, {
       method: 'POST'
     })
     .then(res => {
       if (!res.ok) throw new Error('Failed to update progress');
-      return res.json();
-    })
-    .then((data) => {
-      // Success - refresh the page to show updated progress
-      window.location.reload();
+      // Don't try to parse JSON - some endpoints return empty responses
+      
+      // After a short delay, reload the page to refresh all data
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     })
     .catch(err => {
       console.error("Error updating progress:", err);
