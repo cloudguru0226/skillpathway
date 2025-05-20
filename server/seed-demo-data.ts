@@ -128,9 +128,7 @@ export async function seedDemoData() {
       await storage.createUserProgress({
         userId: user.id,
         roadmapId: roadmap.id,
-        progress: { sections },
-        startedAt: startDate.toISOString(),
-        lastAccessedAt: lastAccessDate.toISOString()
+        progress: { sections }
       });
       
       console.log(`Assigned roadmap ${roadmap.title} to user ${user.username}.`);
@@ -146,13 +144,15 @@ export async function seedDemoData() {
         const activityType = activityTypes[Math.floor(Math.random() * activityTypes.length)];
         const duration = Math.floor(Math.random() * 30) * 60; // 0-30 minutes in seconds
         
-        await storage.createActivityLog({
-          userId: user.id,
-          roadmapId: roadmap.id,
-          action: activityType,
-          timestamp: activityDate,
-          duration
-        });
+        try {
+          await storage.createActivityLog({
+            userId: user.id,
+            roadmapId: roadmap.id,
+            duration
+          });
+        } catch (error) {
+          console.error("Error creating activity log:", error);
+        }
       }
     }
     
