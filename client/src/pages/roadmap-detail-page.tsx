@@ -87,8 +87,8 @@ const RoadmapDetailPage = () => {
         let newNode;
         
         if (node.completed) {
-          // If completed, change to in-progress
-          newNode = { ...node, completed: false, inProgress: true, isUpdating: true };
+          // If completed, toggle back to not started
+          newNode = { ...node, completed: false, inProgress: false, isUpdating: true };
           action = 'incomplete';
         } else if (node.inProgress) {
           // If in-progress, change to completed
