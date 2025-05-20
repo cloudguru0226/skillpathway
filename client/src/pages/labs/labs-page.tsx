@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsItem, TabsList } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Server, Clock, Tag, Calendar, ArrowRight, Search } from "lucide-react";
@@ -147,10 +147,10 @@ export default function LabsPage() {
           
           <Tabs defaultValue="all">
             <TabsList>
-              <TabsItem value="all">All Labs</TabsItem>
-              <TabsItem value="aws">AWS</TabsItem>
-              <TabsItem value="azure">Azure</TabsItem>
-              <TabsItem value="gcp">GCP</TabsItem>
+              <TabsTrigger value="all">All Labs</TabsTrigger>
+              <TabsTrigger value="aws">AWS</TabsTrigger>
+              <TabsTrigger value="azure">Azure</TabsTrigger>
+              <TabsTrigger value="gcp">GCP</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
