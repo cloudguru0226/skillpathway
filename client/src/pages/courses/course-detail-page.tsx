@@ -95,6 +95,7 @@ export default function CourseDetailPage() {
   const courseId = parseInt(params.id);
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("content");
+  const [openItems, setOpenItems] = useState<string[]>([]);
   
   // Fetch course details
   const { 
@@ -456,6 +457,7 @@ export default function CourseDetailPage() {
                         key={module.id} 
                         value={module.id.toString()}
                         className="border rounded-md"
+                        id={`module-${module.id}`}
                       >
                         <AccordionTrigger className="px-4 py-3 hover:no-underline">
                           <div className="flex flex-col items-start text-left">
@@ -848,7 +850,19 @@ export default function CourseDetailPage() {
             </CardContent>
             <CardFooter>
               {enrollment ? (
-                <Button className="w-full">
+                <Button 
+                  className="w-full"
+                  onClick={() => {
+                    // Find the first incomplete module and navigate to it
+                    const firstModule = modules?.[0];
+                    if (firstModule) {
+                      // Scroll to the module content
+                      document.getElementById(`module-${firstModule.id}`)?.scrollIntoView({ behavior: 'smooth' });
+                      // Open the accordion for this module
+                      setOpenItems(prev => [...prev, firstModule.id.toString()]);
+                    }
+                  }}
+                >
                   <Play className="h-4 w-4 mr-2" />
                   Continue Learning
                 </Button>
