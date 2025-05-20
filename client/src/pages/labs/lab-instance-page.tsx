@@ -6,7 +6,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsItem, TabsList } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
@@ -537,9 +537,9 @@ export default function LabInstancePage() {
               <CardHeader className="border-b pb-3">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList>
-                    <TabsItem value="tasks">Tasks</TabsItem>
-                    <TabsItem value="console">Console</TabsItem>
-                    <TabsItem value="resources">Resources</TabsItem>
+                    <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                    <TabsTrigger value="console">Console</TabsTrigger>
+                    <TabsTrigger value="resources">Resources</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </CardHeader>

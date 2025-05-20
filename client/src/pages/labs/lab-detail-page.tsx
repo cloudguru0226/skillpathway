@@ -7,7 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsItem, TabsList } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Clock, Tag, Calendar, Server, ArrowRight, Check, Info, FileText } from "lucide-react";
@@ -227,10 +227,10 @@ export default function LabDetailPage() {
           
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-8">
-              <TabsItem value="overview">Overview</TabsItem>
-              <TabsItem value="tasks">Tasks</TabsItem>
-              <TabsItem value="architecture">Architecture</TabsItem>
-              <TabsItem value="resources">Resources</TabsItem>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="tasks">Tasks</TabsTrigger>
+              <TabsTrigger value="architecture">Architecture</TabsTrigger>
+              <TabsTrigger value="resources">Resources</TabsTrigger>
             </TabsList>
             
             <TabsContent value="overview" className="space-y-6">

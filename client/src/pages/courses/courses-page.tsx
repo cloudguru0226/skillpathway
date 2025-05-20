@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsItem, TabsList } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { 
@@ -207,8 +207,8 @@ export default function CoursesPage() {
             className="w-full sm:w-auto"
           >
             <TabsList className="w-full sm:w-auto">
-              <TabsItem value="all">All Courses</TabsItem>
-              <TabsItem value="enrolled">My Courses</TabsItem>
+              <TabsTrigger value="all">All Courses</TabsTrigger>
+              <TabsTrigger value="enrolled">My Courses</TabsTrigger>
             </TabsList>
           </Tabs>
           
