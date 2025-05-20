@@ -221,7 +221,7 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
     // Record the action for XP rewards and progress tracking
     recordNodeActionMutation.mutate({
       nodeId,
-      action: node.completed ? 'complete' : 'incomplete'
+      action
     });
     
     // Update section status
