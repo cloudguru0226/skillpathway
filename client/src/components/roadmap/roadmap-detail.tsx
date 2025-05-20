@@ -208,14 +208,8 @@ export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
     
     console.log("Node clicked:", nodeIndex);
     
-    // Set the selected node index - this shows the details panel
-    if (selectedNodeIndex === nodeIndex) {
-      // If the same node is clicked twice, don't toggle off, keep it selected
-      console.log("Same node clicked, keeping selected");
-    } else {
-      console.log("New node selected:", nodeIndex);
-      setSelectedNodeIndex(nodeIndex);
-    }
+    // Always set the selected node index to show details
+    setSelectedNodeIndex(nodeIndex);
     
     // Deep clone the roadmap content
     const updatedContent = JSON.parse(JSON.stringify(roadmap.content));
