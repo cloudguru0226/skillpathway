@@ -942,6 +942,16 @@ export class MemStorage implements IStorage {
 
 export class DatabaseStorage implements IStorage {
   // Analytics & Admin methods
+  async getUsers(): Promise<User[]> {
+    try {
+      const allUsers = await db.select().from(users).orderBy(asc(users.id));
+      return allUsers;
+    } catch (error) {
+      console.error("Error getting all users:", error);
+      return [];
+    }
+  }
+  
   async getPlatformStats(): Promise<{
     totalUsers: number;
     totalRoadmaps: number;
