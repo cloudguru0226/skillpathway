@@ -8,8 +8,23 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Server, Clock, Tag, Calendar, ArrowRight, Search } from "lucide-react";
+import { 
+  Server, 
+  Clock, 
+  Tag, 
+  Calendar, 
+  ArrowRight, 
+  Search, 
+  History, 
+  CheckCircle2, 
+  AlertCircle, 
+  Play,
+  ArrowUpRight,
+  RotateCcw
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/hooks/use-auth";
 
 // Lab environment type - should match the schema defined in shared/schema.ts
 type LabEnvironment = {
@@ -27,10 +42,28 @@ type LabEnvironment = {
   providerName: string;
 };
 
+// Type for lab instance/history
+type LabInstance = {
+  id: number;
+  userId: number;
+  labId: number;
+  status: 'active' | 'completed' | 'expired' | 'failed';
+  createdAt: string;
+  updatedAt: string;
+  progress: number;
+  completionDate?: string;
+  notes?: string;
+  lastAccessedAt: string;
+  resources?: { type: string; url: string; }[];
+  terraformState?: string;
+};
+
 export default function LabsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [difficulty, setDifficulty] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("all");
   
   // Fetch lab environments
   const { data: labs, isLoading, error } = useQuery({
@@ -50,6 +83,27 @@ export default function LabsPage() {
         throw err;
       }
     }
+  });
+
+  // Fetch user lab history
+  const { data: labHistory, isLoading: isHistoryLoading } = useQuery({
+    queryKey: ["/api/lab-instances"],
+    queryFn: async () => {
+      // Mock data for development
+      if (process.env.NODE_ENV === "development") {
+        return mockLabInstances;
+      }
+      
+      try {
+        const res = await fetch('/api/lab-instances');
+        if (!res.ok) throw new Error('Failed to fetch lab history');
+        return await res.json() as LabInstance[];
+      } catch (err) {
+        console.error("Error fetching lab history:", err);
+        return [];
+      }
+    },
+    enabled: !!user,
   });
   
   // Filter labs by difficulty and search term
@@ -126,105 +180,266 @@ export default function LabsPage() {
     );
   }
   
+  // Get active lab instances (in progress)
+  const activeLabs = labHistory?.filter(instance => 
+    instance.status === 'active'
+  ) || [];
+  
+  // Get completed lab instances
+  const completedLabs = labHistory?.filter(instance => 
+    instance.status === 'completed'
+  ) || [];
+  
+  // Match lab instances with lab details
+  const getLabDetails = (labId: number) => {
+    return labs?.find(lab => lab.id === labId) || null;
+  };
+  
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">Terraform Labs</h1>
       
-      {/* Filters and Search */}
-      <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
-        <div className="flex items-center space-x-4">
-          <Select value={difficulty} onValueChange={handleDifficultyChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Difficulty" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Difficulties</SelectItem>
-              <SelectItem value="beginner">Beginner</SelectItem>
-              <SelectItem value="intermediate">Intermediate</SelectItem>
-              <SelectItem value="advanced">Advanced</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Your Labs Section - Only show if user has lab history */}
+      {user && labHistory && labHistory.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold mb-4 flex items-center">
+            <History className="mr-2 h-5 w-5" />
+            Your Labs
+          </h2>
           
-          <Tabs defaultValue="all">
-            <TabsList>
-              <TabsTrigger value="all">All Labs</TabsTrigger>
-              <TabsTrigger value="aws">AWS</TabsTrigger>
-              <TabsTrigger value="azure">Azure</TabsTrigger>
-              <TabsTrigger value="gcp">GCP</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-        
-        <div className="relative w-full md:w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search labs..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="pl-8"
-          />
-        </div>
-      </div>
-      
-      {/* Lab Cards */}
-      {filteredLabs?.length === 0 ? (
-        <div className="text-center py-12">
-          <Server className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-semibold">No labs found</h3>
-          <p className="text-muted-foreground">Try adjusting your filters or search term</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredLabs?.map(lab => (
-            <Card key={lab.id} className="overflow-hidden flex flex-col h-full">
-              <div 
-                className="h-48 bg-cover bg-center" 
-                style={{ 
-                  backgroundImage: `url(${lab.imageUrl || '/placeholder-lab.jpg'})`,
-                  backgroundColor: '#1e293b'
-                }}
-              />
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle>{lab.name}</CardTitle>
-                  <Badge variant={
-                    lab.difficulty === 'beginner' ? 'default' : 
-                    lab.difficulty === 'intermediate' ? 'secondary' : 'destructive'
-                  }>
-                    {lab.difficulty}
-                  </Badge>
-                </div>
-                <CardDescription>{lab.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {lab.tags.map(tag => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-2">
-                  <Clock className="h-4 w-4" />
-                  <span>{lab.estimatedTime}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Tag className="h-4 w-4" />
-                  <span>{lab.providerName}</span>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Link href={`/labs/${lab.id}`}>
-                  <Button className="w-full">
-                    Start Lab
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardFooter>
-            </Card>
-          ))}
+          {/* Active Labs */}
+          {activeLabs.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-medium mb-3">In Progress</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {activeLabs.map((instance) => {
+                  const labDetails = getLabDetails(instance.labId);
+                  if (!labDetails) return null;
+                  
+                  return (
+                    <Card key={instance.id} className="overflow-hidden border-primary/20">
+                      <div className="flex p-4">
+                        <div 
+                          className="h-16 w-16 rounded-md bg-cover bg-center flex-shrink-0 mr-4" 
+                          style={{ 
+                            backgroundImage: `url(${labDetails.imageUrl || '/placeholder-lab.jpg'})`,
+                            backgroundColor: '#1e293b'
+                          }}
+                        />
+                        <div className="flex-grow">
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-medium text-base">{labDetails.name}</h4>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {Math.round(instance.progress)}% complete
+                            </Badge>
+                          </div>
+                          <div className="mt-1 mb-2">
+                            <Progress value={instance.progress} className="h-1.5" />
+                          </div>
+                          <div className="flex gap-x-4 mt-2">
+                            <Button size="sm" variant="secondary" className="flex-1">
+                              <Play className="h-3.5 w-3.5 mr-1" />
+                              Continue
+                            </Button>
+                            <Button size="sm" variant="outline" className="flex-1">
+                              View Details
+                              <ArrowUpRight className="h-3.5 w-3.5 ml-1" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* Completed Labs */}
+          {completedLabs.length > 0 && (
+            <div>
+              <h3 className="text-lg font-medium mb-3">Completed</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {completedLabs.slice(0, 3).map((instance) => {
+                  const labDetails = getLabDetails(instance.labId);
+                  if (!labDetails) return null;
+                  
+                  return (
+                    <Card key={instance.id} className="overflow-hidden">
+                      <div className="p-4">
+                        <div className="flex items-center mb-2">
+                          <div 
+                            className="h-10 w-10 rounded-md bg-cover bg-center flex-shrink-0 mr-3" 
+                            style={{ 
+                              backgroundImage: `url(${labDetails.imageUrl || '/placeholder-lab.jpg'})`,
+                              backgroundColor: '#1e293b'
+                            }}
+                          />
+                          <div>
+                            <h4 className="font-medium text-sm line-clamp-1">{labDetails.name}</h4>
+                            <div className="flex items-center text-xs text-green-500">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Completed on {new Date(instance.completionDate || instance.updatedAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex justify-between mt-2">
+                          <Button size="sm" variant="ghost" className="text-xs h-7 px-2">
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            Retake
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-xs h-7 px-2">
+                            View Report
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+              
+              {completedLabs.length > 3 && (
+                <Button variant="link" className="mt-2">
+                  View all {completedLabs.length} completed labs
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       )}
+      
+      {/* All Labs Section */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Browse Labs</h2>
+        
+        {/* Filters and Search */}
+        <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
+          <div className="flex items-center space-x-4">
+            <Select value={difficulty} onValueChange={handleDifficultyChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Difficulty" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Difficulties</SelectItem>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+              <TabsList>
+                <TabsTrigger value="all">All Labs</TabsTrigger>
+                <TabsTrigger value="aws">AWS</TabsTrigger>
+                <TabsTrigger value="azure">Azure</TabsTrigger>
+                <TabsTrigger value="gcp">GCP</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search labs..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="pl-8"
+            />
+          </div>
+        </div>
+        
+        {/* Lab Cards */}
+        {filteredLabs?.length === 0 ? (
+          <div className="text-center py-12">
+            <Server className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold">No labs found</h3>
+            <p className="text-muted-foreground">Try adjusting your filters or search term</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredLabs?.map(lab => {
+              // Check if user has an instance of this lab
+              const labInstance = labHistory?.find(instance => instance.labId === lab.id);
+              const isInProgress = labInstance?.status === 'active';
+              const isCompleted = labInstance?.status === 'completed';
+              
+              return (
+                <Card key={lab.id} className={`overflow-hidden flex flex-col h-full ${isInProgress ? 'border-primary/30' : ''}`}>
+                  <div 
+                    className="h-48 bg-cover bg-center relative" 
+                    style={{ 
+                      backgroundImage: `url(${lab.imageUrl || '/placeholder-lab.jpg'})`,
+                      backgroundColor: '#1e293b'
+                    }}
+                  >
+                    {isInProgress && (
+                      <div className="absolute top-2 right-2 bg-primary/80 text-white text-xs py-1 px-2 rounded-full flex items-center">
+                        <Play className="h-3 w-3 mr-1" /> In Progress
+                      </div>
+                    )}
+                    {isCompleted && (
+                      <div className="absolute top-2 right-2 bg-green-500/80 text-white text-xs py-1 px-2 rounded-full flex items-center">
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Completed
+                      </div>
+                    )}
+                  </div>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle>{lab.name}</CardTitle>
+                      <Badge variant={
+                        lab.difficulty === 'beginner' ? 'default' : 
+                        lab.difficulty === 'intermediate' ? 'secondary' : 'destructive'
+                      }>
+                        {lab.difficulty}
+                      </Badge>
+                    </div>
+                    <CardDescription>{lab.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {lab.tags.map(tag => (
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-2">
+                      <Clock className="h-4 w-4" />
+                      <span>{lab.estimatedTime}</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                      <Tag className="h-4 w-4" />
+                      <span>{lab.providerName}</span>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Link href={`/labs/${lab.id}`}>
+                      <Button className="w-full" variant={isInProgress ? "secondary" : "default"}>
+                        {isInProgress ? (
+                          <>
+                            Continue Lab
+                            <Play className="ml-2 h-4 w-4" />
+                          </>
+                        ) : isCompleted ? (
+                          <>
+                            Revisit Lab
+                            <RotateCcw className="ml-2 h-4 w-4" />
+                          </>
+                        ) : (
+                          <>
+                            Start Lab
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </>
+                        )}
+                      </Button>
+                    </Link>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

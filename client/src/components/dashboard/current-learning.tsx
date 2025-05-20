@@ -104,9 +104,12 @@ export function CurrentLearning() {
               Last active: {new Date(recentProgress.lastAccessedAt).toLocaleString()}
             </p>
           </div>
-          <Link href={`/roadmap/${roadmap.id}`}>
-            <a className="text-primary text-sm hover:underline">View Roadmap</a>
-          </Link>
+          <button 
+            onClick={() => window.location.href = `/roadmap/${roadmap.id}`}
+            className="text-primary text-sm hover:underline cursor-pointer bg-transparent border-none"
+          >
+            View Roadmap
+          </button>
         </div>
       </CardHeader>
       <CardContent>
@@ -136,11 +139,12 @@ export function CurrentLearning() {
               ))}
               
               {currentSection.nodes.length > 3 && (
-                <Link href={`/roadmap/${roadmap.id}`}>
-                  <a className="text-primary text-sm hover:underline block text-center mt-2">
-                    View all {currentSection.nodes.length} items in this section
-                  </a>
-                </Link>
+                <button
+                  onClick={() => window.location.href = `/roadmap/${roadmap.id}`}
+                  className="text-primary text-sm hover:underline block text-center mt-2 w-full bg-transparent border-none cursor-pointer"
+                >
+                  View all {currentSection.nodes.length} items in this section
+                </button>
               )}
             </div>
           </>
