@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { useQuery } from "@tanstack/react-query";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,6 +14,8 @@ export default function FixedRoadmap() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   // Track which section we're viewing
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  // Get WebSocket connection for real-time updates
+  const { lastMessage } = useWebSocket();
   
   // Load the roadmap data (Frontend Developer roadmap)
   const { data: roadmap, isLoading } = useQuery({
@@ -22,6 +25,14 @@ export default function FixedRoadmap() {
       return res.json();
     }
   });
+
+  // Handle real-time progress updates from WebSocket
+  useEffect(() => {
+    if (lastMessage?.type === 'progress_update' && lastMessage.data?.type === 'topic_progress') {
+      console.log('Received real-time progress update:', lastMessage.data);
+      // The useQuery hook will automatically refetch due to cache invalidation in useWebSocket
+    }
+  }, [lastMessage]);
   
   // If still loading, show skeleton UI
   if (isLoading) {

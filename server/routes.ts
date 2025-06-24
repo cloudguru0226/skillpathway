@@ -522,6 +522,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Create new progress entry
         const progress = await storage.createUserProgress(progressData);
+        
+        // Broadcast progress update for new progress entries
+        if (app.locals.broadcastProgressUpdate) {
+          app.locals.broadcastProgressUpdate(req.user.id, {
+            type: 'progress_created',
+            roadmapId: progressData.roadmapId,
+            progress: progressData.progress,
+            progressRecord: progress
+          });
+        }
+        
         return res.status(201).json(progress);
       }
     } catch (error) {
