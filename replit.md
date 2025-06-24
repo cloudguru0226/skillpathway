@@ -16,9 +16,11 @@ A comprehensive online learning platform with structured roadmaps for different 
 
 ## Recent Changes
 **June 24, 2025:**
-- Enhanced schema with assignments, categories, permissions for granular content management
-- Preparing to implement comprehensive learner self-enrollment and admin CRUD features
-- Added support for training assignments with due dates and priorities
+- ✅ Implemented comprehensive learner features: self-enrollment, global search, My Learning dashboard
+- ✅ Added enhanced admin content management with full CRUD for roadmaps, courses, labs, and trainings
+- ✅ Extended navigation with "My Learning" and "Search" options for better UX
+- ✅ Enhanced backend storage methods to support all new learner and admin functionality
+- ✅ Fixed schema conflicts and ensured all content types are available for admin management
 
 ## Project Architecture
 

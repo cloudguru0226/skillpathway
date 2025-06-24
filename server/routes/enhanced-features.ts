@@ -173,6 +173,10 @@ export function registerEnhancedFeatures(app: Express) {
         case 'lab':
           content = await storage.createLabEnvironment(contentData);
           break;
+        case 'training':
+          // Training content can be handled as a special type of course
+          content = await storage.createCourse({ ...contentData, type: 'training' });
+          break;
         default:
           return res.status(400).json({ error: "Invalid content type" });
       }
