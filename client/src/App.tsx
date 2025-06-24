@@ -26,6 +26,10 @@ import CoursesPage from "@/pages/courses/courses-page";
 import CourseDetailPage from "@/pages/courses/course-detail-page";
 import CertificatesPage from "@/pages/courses/certificates-page";
 
+// Enhanced learner features
+import MyEnrollmentsPage from "@/pages/my-enrollments";
+import SearchPage from "@/pages/search-page";
+
 function Router() {
   return (
     <Switch>
@@ -49,6 +53,10 @@ function Router() {
       <ProtectedRoute path="/courses" component={CoursesPage} />
       <ProtectedRoute path="/courses/:id" component={CourseDetailPage} />
       <ProtectedRoute path="/certificates" component={CertificatesPage} />
+      
+      {/* Enhanced Learner Features */}
+      <ProtectedRoute path="/my-enrollments" component={MyEnrollmentsPage} />
+      <ProtectedRoute path="/search" component={SearchPage} />
       
       <Route path="*" component={NotFound} />
     </Switch>

@@ -7,6 +7,7 @@ import UserManagement from "@/components/admin/user-management";
 import AssignRoadmaps from "@/components/admin/assign-roadmaps";
 import ReportsSection from "@/components/admin/reports-section";
 import AdminStats from "@/components/admin/admin-stats";
+import ContentManagement from "@/components/admin/content-management";
 
 export default function AdminPage() {
   const { user, isLoading } = useAuth();
@@ -46,10 +47,14 @@ export default function AdminPage() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 w-full gap-2">
+        <TabsList className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 w-full gap-2">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart2 className="h-4 w-4" />
             <span className="hidden md:inline">Overview</span>
+          </TabsTrigger>
+          <TabsTrigger value="content" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            <span className="hidden md:inline">Content</span>
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -57,7 +62,7 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="roadmaps" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
-            <span className="hidden md:inline">Assign Roadmaps</span>
+            <span className="hidden md:inline">Assign</span>
           </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -67,6 +72,10 @@ export default function AdminPage() {
         
         <TabsContent value="overview" className="space-y-6">
           <AdminStats />
+        </TabsContent>
+        
+        <TabsContent value="content" className="space-y-6">
+          <ContentManagement />
         </TabsContent>
         
         <TabsContent value="users" className="space-y-6">

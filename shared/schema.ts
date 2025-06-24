@@ -812,12 +812,15 @@ export const certificates = pgTable("certificates", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   courseId: integer("course_id").references(() => courses.id),
+  roadmapId: integer("roadmap_id").references(() => roadmaps.id),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description"),
-  issueDate: timestamp("issue_date").defaultNow().notNull(),
+  issuerName: varchar("issuer_name", { length: 100 }).notNull(),
+  templateUrl: text("template_url"),
+  certificateUrl: text("certificate_url"),
+  verificationCode: varchar("verification_code", { length: 50 }).unique(),
+  issuedDate: timestamp("issued_date").defaultNow().notNull(),
   expiryDate: timestamp("expiry_date"),
-  certificateUrl: text("certificate_url").notNull(),
-  verificationCode: varchar("verification_code", { length: 50 }).notNull().unique(),
   metadata: jsonb("metadata"), // Additional certificate data
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -825,14 +828,193 @@ export const certificates = pgTable("certificates", {
 export const insertCertificateSchema = createInsertSchema(certificates).pick({
   userId: true,
   courseId: true,
+  roadmapId: true,
   title: true,
   description: true,
-  issueDate: true,
-  expiryDate: true,
+  issuerName: true,
+  templateUrl: true,
   certificateUrl: true,
   verificationCode: true,
+  expiryDate: true,
   metadata: true,
 });
 
 export type InsertCertificate = z.infer<typeof insertCertificateSchema>;
 export type Certificate = typeof certificates.$inferSelect;
+
+// ============================================================================
+// Enhanced Assignment System
+// ============================================================================
+
+// Training assignments schema (for assigning content to users)
+export const assignments = pgTable("assignments", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  assignerUserId: integer("assigner_user_id").notNull().references(() => users.id),
+  courseId: integer("course_id").references(() => courses.id),
+  roadmapId: integer("roadmap_id").references(() => roadmaps.id),
+  labEnvironmentId: integer("lab_environment_id").references(() => labEnvironments.id),
+  dueDate: timestamp("due_date"),
+  priority: varchar("priority", { length: 20 }).default("medium").notNull(), // 'low', 'medium', 'high', 'urgent'
+  isRequired: boolean("is_required").default(true).notNull(),
+  instructions: text("instructions"),
+  gradeWeight: integer("grade_weight").default(100), // percentage weight in overall grade
+  maxAttempts: integer("max_attempts").default(0), // 0 = unlimited
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertAssignmentSchema = createInsertSchema(assignments).pick({
+  title: true,
+  description: true,
+  assignerUserId: true,
+  courseId: true,
+  roadmapId: true,
+  labEnvironmentId: true,
+  dueDate: true,
+  priority: true,
+  isRequired: true,
+  instructions: true,
+  gradeWeight: true,
+  maxAttempts: true,
+});
+
+export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
+export type Assignment = typeof assignments.$inferSelect;
+
+// User assignments schema (tracks individual user assignments)
+export const userAssignments = pgTable("user_assignments", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").notNull().references(() => assignments.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  status: varchar("status", { length: 20 }).default("assigned").notNull(), // 'assigned', 'in_progress', 'completed', 'overdue', 'graded'
+  startedAt: timestamp("started_at"),
+  submittedAt: timestamp("submitted_at"),
+  completedAt: timestamp("completed_at"),
+  grade: integer("grade"), // percentage score
+  feedback: text("feedback"),
+  attemptCount: integer("attempt_count").default(0).notNull(),
+  timeSpent: integer("time_spent").default(0), // in minutes
+  submissionData: jsonb("submission_data"), // User's work/answers
+  autoGraded: boolean("auto_graded").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    unq: unique().on(table.assignmentId, table.userId)
+  }
+});
+
+export const insertUserAssignmentSchema = createInsertSchema(userAssignments).pick({
+  assignmentId: true,
+  userId: true,
+  status: true,
+  startedAt: true,
+  submittedAt: true,
+  completedAt: true,
+  grade: true,
+  feedback: true,
+  attemptCount: true,
+  timeSpent: true,
+  submissionData: true,
+  autoGraded: true,
+});
+
+export type InsertUserAssignment = z.infer<typeof insertUserAssignmentSchema>;
+export type UserAssignment = typeof userAssignments.$inferSelect;
+
+// ============================================================================
+// Enhanced Categories and Tags System
+// ============================================================================
+
+// Categories schema for better content organization
+export const categories = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  parentId: integer("parent_id").references(() => categories.id),
+  iconName: varchar("icon_name", { length: 50 }), // Lucide icon name
+  color: varchar("color", { length: 7 }), // hex color code
+  isActive: boolean("is_active").default(true).notNull(),
+  order: integer("order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCategorySchema = createInsertSchema(categories).pick({
+  name: true,
+  description: true,
+  parentId: true,
+  iconName: true,
+  color: true,
+  isActive: true,
+  order: true,
+});
+
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type Category = typeof categories.$inferSelect;
+
+// Content categories relationship table
+export const contentCategories = pgTable("content_categories", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id").notNull().references(() => categories.id),
+  courseId: integer("course_id").references(() => courses.id),
+  roadmapId: integer("roadmap_id").references(() => roadmaps.id),
+  labEnvironmentId: integer("lab_environment_id").references(() => labEnvironments.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertContentCategorySchema = createInsertSchema(contentCategories).pick({
+  categoryId: true,
+  courseId: true,
+  roadmapId: true,
+  labEnvironmentId: true,
+});
+
+export type InsertContentCategory = z.infer<typeof insertContentCategorySchema>;
+export type ContentCategory = typeof contentCategories.$inferSelect;
+
+// ============================================================================
+// Enhanced Permissions and Roles
+// ============================================================================
+
+// Permissions schema for granular access control
+export const permissions = pgTable("permissions", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  resource: varchar("resource", { length: 50 }).notNull(), // 'users', 'courses', 'labs', 'reports', etc.
+  action: varchar("action", { length: 20 }).notNull(), // 'create', 'read', 'update', 'delete', 'assign'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPermissionSchema = createInsertSchema(permissions).pick({
+  name: true,
+  description: true,
+  resource: true,
+  action: true,
+});
+
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+export type Permission = typeof permissions.$inferSelect;
+
+// Role permissions relationship table  
+export const rolePermissions = pgTable("role_permissions", {
+  id: serial("id").primaryKey(),
+  roleId: integer("role_id").notNull().references(() => roles.id),
+  permissionId: integer("permission_id").notNull().references(() => permissions.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    unq: unique().on(table.roleId, table.permissionId)
+  }
+});
+
+export const insertRolePermissionSchema = createInsertSchema(rolePermissions).pick({
+  roleId: true,
+  permissionId: true,
+});
+
+export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
+export type RolePermission = typeof rolePermissions.$inferSelect;

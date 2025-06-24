@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Code, LayoutDashboard, LogOut, Map, User } from "lucide-react";
+import { BookOpen, Code, LayoutDashboard, LogOut, Map, User, Target, Search } from "lucide-react";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -74,6 +74,26 @@ export function Navbar() {
             >
               <Code className="mr-2 h-4 w-4" />
               Labs
+            </Button>
+          </Link>
+          <Link href="/my-enrollments">
+            <Button 
+              variant={isActive("/my-enrollments") ? "default" : "ghost"}
+              size="sm"
+              className="text-sm"
+            >
+              <Target className="mr-2 h-4 w-4" />
+              My Learning
+            </Button>
+          </Link>
+          <Link href="/search">
+            <Button 
+              variant={isActive("/search") ? "default" : "ghost"}
+              size="sm"
+              className="text-sm"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              Search
             </Button>
           </Link>
         </nav>

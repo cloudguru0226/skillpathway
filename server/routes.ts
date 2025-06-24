@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import { registerEnhancedFeatures } from "./routes/enhanced-features";
 import { z } from "zod";
 import { 
   insertRoadmapSchema, 
@@ -34,6 +35,9 @@ import {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
+  
+  // Register enhanced learner and admin features
+  registerEnhancedFeatures(app);
 
   // Middleware to verify admin status
   const requireAdmin = (req: any, res: any, next: any) => {
