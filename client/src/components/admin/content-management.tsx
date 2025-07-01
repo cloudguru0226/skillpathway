@@ -49,6 +49,19 @@ interface ContentItem {
   completionRate?: number;
 }
 
+interface ContentItem {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  difficulty: string;
+  status: string;
+  tags: string[];
+  categories: string[];
+  enrollments?: number;
+  updatedAt?: string;
+}
+
 interface ContentFormData {
   title: string;
   description: string;
@@ -173,12 +186,16 @@ export default function ContentManagement() {
 
   // Delete content mutation
   const deleteContentMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(`/api/admin/content/${id}`, {
+    mutationFn: async (compositeId: string) => {
+      // Parse composite ID like "roadmap-1" to get type and numeric ID
+      const [type, id] = compositeId.split('-');
+      const numericId = parseInt(id);
+      
+      const res = await fetch(`/api/admin/content/${numericId}?type=${type}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete content");
-      return id;
+      return compositeId;
     },
     onSuccess: () => {
       toast({
@@ -198,7 +215,7 @@ export default function ContentManagement() {
 
   // Bulk operations
   const bulkUpdateMutation = useMutation({
-    mutationFn: async ({ ids, updates }: { ids: number[]; updates: Partial<ContentFormData> }) => {
+    mutationFn: async ({ ids, updates }: { ids: string[]; updates: Partial<ContentFormData> }) => {
       const res = await fetch("/api/admin/content/bulk", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -224,7 +241,7 @@ export default function ContentManagement() {
     }
   });
 
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
   const resetForm = () => {
     setFormData({
@@ -277,7 +294,7 @@ export default function ContentManagement() {
     updateContentMutation.mutate({ id: editingItem.id, data: formData });
   };
 
-  const handleDelete = (id: number, title: string) => {
+  const handleDelete = (id: string, title: string) => {
     if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
       deleteContentMutation.mutate(id);
     }
