@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: skillpathway-db
+    environment:
+      POSTGRES_USER: skilluser
+      POSTGRES_PASSWORD: skillpass
+      POSTGRES_DB: skilldb
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: skillpathway-app
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://skilluser:skillpass@db:5432/skilldb
+      - SESSION_SECRET=supersecretvalue
+    depends_on:
+      - db
+
+volumes:
+  db_data:
