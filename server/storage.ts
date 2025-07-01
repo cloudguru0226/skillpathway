@@ -2358,6 +2358,127 @@ export class DatabaseStorage implements IStorage {
     
     return updatedPost;
   }
+
+  // Role management methods
+  async getRoleByName(name: string): Promise<Role | undefined> {
+    try {
+      const [role] = await db.select().from(roles).where(eq(roles.name, name));
+      return role;
+    } catch (error) {
+      console.error("Error getting role by name:", error);
+      return undefined;
+    }
+  }
+
+  async createRole(roleData: InsertRole): Promise<Role> {
+    try {
+      const [role] = await db.insert(roles).values(roleData).returning();
+      return role;
+    } catch (error) {
+      console.error("Error creating role:", error);
+      throw error;
+    }
+  }
+
+  async getRoles(): Promise<Role[]> {
+    try {
+      return await db.select().from(roles).orderBy(asc(roles.name));
+    } catch (error) {
+      console.error("Error getting roles:", error);
+      return [];
+    }
+  }
+
+  async getRole(id: number): Promise<Role | undefined> {
+    try {
+      const [role] = await db.select().from(roles).where(eq(roles.id, id));
+      return role;
+    } catch (error) {
+      console.error("Error getting role by id:", error);
+      return undefined;
+    }
+  }
+
+  async updateRole(id: number, roleData: Partial<Role>): Promise<Role | undefined> {
+    try {
+      const [updatedRole] = await db
+        .update(roles)
+        .set({ ...roleData, updatedAt: new Date() })
+        .where(eq(roles.id, id))
+        .returning();
+      return updatedRole;
+    } catch (error) {
+      console.error("Error updating role:", error);
+      return undefined;
+    }
+  }
+
+  async deleteRole(id: number): Promise<boolean> {
+    try {
+      await db.delete(roles).where(eq(roles.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting role:", error);
+      return false;
+    }
+  }
+
+  async assignRoleToUser(userRole: InsertUserRole): Promise<UserRole> {
+    try {
+      const [newUserRole] = await db.insert(userRoles).values(userRole).returning();
+      return newUserRole;
+    } catch (error) {
+      console.error("Error assigning role to user:", error);
+      throw error;
+    }
+  }
+
+  async removeRoleFromUser(userId: number, roleId: number): Promise<boolean> {
+    try {
+      await db.delete(userRoles).where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)));
+      return true;
+    } catch (error) {
+      console.error("Error removing role from user:", error);
+      return false;
+    }
+  }
+
+  async getUserRoles(userId: number): Promise<(Role & { assignedAt: Date })[]> {
+    try {
+      const result = await db
+        .select({
+          id: roles.id,
+          name: roles.name,
+          description: roles.description,
+          permissions: roles.permissions,
+          createdAt: roles.createdAt,
+          updatedAt: roles.updatedAt,
+          assignedAt: userRoles.assignedAt
+        })
+        .from(userRoles)
+        .innerJoin(roles, eq(userRoles.roleId, roles.id))
+        .where(eq(userRoles.userId, userId));
+      return result;
+    } catch (error) {
+      console.error("Error getting user roles:", error);
+      return [];
+    }
+  }
+
+  async hasPermission(userId: number, permission: string): Promise<boolean> {
+    try {
+      // Get user roles and check permissions
+      const userRolesWithPermissions = await this.getUserRoles(userId);
+      
+      // Check if any role has the required permission
+      return userRolesWithPermissions.some(role => 
+        Array.isArray(role.permissions) && role.permissions.includes(permission)
+      );
+    } catch (error) {
+      console.error("Error checking user permission:", error);
+      return false;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

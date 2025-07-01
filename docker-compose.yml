@@ -1,28 +1,48 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: skillpathway-db
-    environment:
-      POSTGRES_USER: skilluser
-      POSTGRES_PASSWORD: skillpass
-      POSTGRES_DB: skilldb
-    ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
   app:
     build: .
-    container_name: skillpathway-app
     ports:
       - "5000:5000"
     environment:
-      - DATABASE_URL=postgresql://skilluser:skillpass@db:5432/skilldb
-      - SESSION_SECRET=supersecretvalue
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/lms
+      - SESSION_SECRET=your-session-secret-key
     depends_on:
       - db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - lms-network
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=lms
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lms-network
 
 volumes:
-  db_data:
+  postgres_data:
+
+networks:
+  lms-network:
+    driver: bridge
