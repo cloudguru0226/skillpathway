@@ -220,8 +220,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all content types
       const roadmaps = await storage.getRoadmaps();
-      const courses = await storage.getCourses();
-      const labs = await storage.getLabs();
+      
+      // Get lab environments as "labs"
+      const labEnvironments = await storage.getLabEnvironments();
       
       // Format as content items
       const contentItems = [
@@ -240,28 +241,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           enrollmentCount: 0,
           completionRate: 0
         })),
-        ...courses.map(c => ({
-          id: c.id,
-          title: c.title,
-          description: c.description,
-          type: "course" as const,
-          difficulty: c.difficultyLevel || "beginner",
-          status: "published",
-          tags: [],
-          categories: [],
-          createdAt: c.createdAt.toISOString(),
-          updatedAt: c.updatedAt.toISOString(),
-          creatorId: 1,
-          enrollmentCount: 0,
-          completionRate: 0
-        })),
-        ...labs.map(l => ({
+        ...labEnvironments.map(l => ({
           id: l.id,
           title: l.name,
           description: l.description,
           type: "lab" as const,
           difficulty: l.difficultyLevel || "beginner",
-          status: "published",
+          status: l.status === "active" ? "published" : "draft",
           tags: [],
           categories: [],
           createdAt: l.createdAt.toISOString(),
@@ -305,17 +291,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const roadmapData = insertRoadmapSchema.parse(contentData);
           newContent = await storage.createRoadmap(roadmapData);
           break;
-        case "course":
-          const courseData = insertCourseSchema.parse(contentData);
-          newContent = await storage.createCourse(courseData);
-          break;
         case "lab":
-          newContent = await storage.createLab({
+          newContent = await storage.createLabEnvironment({
             name: contentData.title,
             description: contentData.description,
             difficultyLevel: contentData.difficulty || "beginner",
             estimatedDuration: contentData.duration || 60,
-            status: "active"
+            status: "active",
+            terraformConfig: "# Basic lab configuration",
+            environmentVariables: {},
+            resourceLimits: {}
           });
           break;
         default:
@@ -348,11 +333,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case "roadmap":
           updatedContent = await storage.updateRoadmap(contentId, updates);
           break;
-        case "course":
-          updatedContent = await storage.updateCourse(contentId, updates);
-          break;
         case "lab":
-          updatedContent = await storage.updateLab(contentId, updates);
+          updatedContent = await storage.updateLabEnvironment(contentId, updates);
           break;
         default:
           return res.status(400).json({ message: "Invalid content type" });
@@ -385,11 +367,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case "roadmap":
           deleted = await storage.deleteRoadmap(contentId);
           break;
-        case "course":
-          deleted = await storage.deleteCourse(contentId);
-          break;
         case "lab":
-          deleted = await storage.deleteLab(contentId);
+          deleted = await storage.deleteLabEnvironment(contentId);
           break;
         default:
           return res.status(400).json({ message: "Invalid content type" });

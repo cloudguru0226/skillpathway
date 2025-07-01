@@ -2479,6 +2479,86 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+
+  // Lab Environment Methods
+  async getLabEnvironments(): Promise<LabEnvironment[]> {
+    try {
+      const environments = await db.select().from(labEnvironments).orderBy(asc(labEnvironments.id));
+      return environments;
+    } catch (error) {
+      console.error("Error getting lab environments:", error);
+      return [];
+    }
+  }
+
+  async getLabEnvironment(id: number): Promise<LabEnvironment | undefined> {
+    try {
+      const [environment] = await db.select().from(labEnvironments).where(eq(labEnvironments.id, id));
+      return environment;
+    } catch (error) {
+      console.error("Error getting lab environment:", error);
+      return undefined;
+    }
+  }
+
+  async createLabEnvironment(envData: InsertLabEnvironment): Promise<LabEnvironment> {
+    try {
+      const [newEnvironment] = await db.insert(labEnvironments).values(envData).returning();
+      return newEnvironment;
+    } catch (error) {
+      console.error("Error creating lab environment:", error);
+      throw error;
+    }
+  }
+
+  async updateLabEnvironment(id: number, updates: Partial<LabEnvironment>): Promise<LabEnvironment | undefined> {
+    try {
+      const [updated] = await db
+        .update(labEnvironments)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(labEnvironments.id, id))
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error("Error updating lab environment:", error);
+      return undefined;
+    }
+  }
+
+  async deleteLabEnvironment(id: number): Promise<boolean> {
+    try {
+      await db.delete(labEnvironments).where(eq(labEnvironments.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting lab environment:", error);
+      return false;
+    }
+  }
+
+  // User management methods
+  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
+    try {
+      const [updated] = await db
+        .update(users)
+        .set(updates)
+        .where(eq(users.id, id))
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error("Error updating user:", error);
+      return undefined;
+    }
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    try {
+      await db.delete(users).where(eq(users.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return false;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
