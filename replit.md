@@ -15,6 +15,14 @@ A comprehensive online learning platform with structured roadmaps for different 
 - **Core Features**: Roadmap viewing, progress tracking, user profiles implemented
 
 ## Recent Changes
+**January 01, 2025:**
+- ✅ **Migration to Replit**: Successfully migrated project from Replit Agent to standard Replit environment
+- ✅ **PostgreSQL Setup**: Created and configured PostgreSQL database with all environment variables
+- ✅ **Role Management**: Fixed missing role management methods in storage layer for proper admin/user separation
+- ✅ **Docker Implementation**: Added complete Docker support with Dockerfile, docker-compose.yml, and health checks
+- ✅ **Security Enhancements**: Implemented proper authentication middleware with clear admin/user role separation
+- ✅ **Health Monitoring**: Added /api/health endpoint for container health checks and monitoring
+
 **June 24, 2025:**
 - ✅ Implemented comprehensive learner features: self-enrollment, global search, My Learning dashboard
 - ✅ Added enhanced admin content management with full CRUD for roadmaps, courses, labs, and trainings

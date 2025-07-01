@@ -36,8 +36,26 @@ import {
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
   
+  // Health check endpoint for Docker
+  app.get("/api/health", (req, res) => {
+    res.status(200).json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      service: "Learning Management System",
+      database: "connected"
+    });
+  });
+  
   // Register enhanced learner and admin features
   registerEnhancedFeatures(app);
+
+  // Middleware to verify authentication
+  const requireAuth = (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    next();
+  };
 
   // Middleware to verify admin status
   const requireAdmin = (req: any, res: any, next: any) => {
@@ -45,7 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Not authenticated" });
     }
     if (!req.user?.isAdmin) {
-      return res.status(403).json({ message: "Not authorized" });
+      return res.status(403).json({ message: "Not authorized - admin access required" });
     }
     next();
   };
