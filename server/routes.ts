@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { registerEnhancedFeatures } from "./routes/enhanced-features";
 import { z } from "zod";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
 import { 
   insertRoadmapSchema, 
   insertBookmarkSchema, 
@@ -30,8 +32,18 @@ import {
   insertCertificateSchema,
   // RBAC schemas
   insertRoleSchema,
-  insertUserRoleSchema
+  insertUserRoleSchema,
+  // User schema
+  insertUserSchema
 } from "@shared/schema";
+
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -147,6 +159,250 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating user:", error);
       return res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Update user (admin only)
+  app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const updates = req.body;
+      
+      // If password is being updated, hash it
+      if (updates.password) {
+        updates.password = await hashPassword(updates.password);
+      }
+
+      const user = await storage.updateUser(userId, updates);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      return res.status(200).json(user);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      return res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Delete user (admin only)
+  app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const deleted = await storage.deleteUser(userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      return res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // ============================================================================
+  // ADMIN CONTENT MANAGEMENT ROUTES
+  // ============================================================================
+
+  // Get all content for admin management
+  app.get("/api/admin/content", requireAdmin, async (req, res) => {
+    try {
+      const { search, status, type } = req.query;
+      
+      // Get all content types
+      const roadmaps = await storage.getRoadmaps();
+      const courses = await storage.getCourses();
+      const labs = await storage.getLabs();
+      
+      // Format as content items
+      const contentItems = [
+        ...roadmaps.map(r => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          type: "roadmap" as const,
+          difficulty: r.difficulty,
+          status: "published",
+          tags: [],
+          categories: [],
+          createdAt: r.createdAt.toISOString(),
+          updatedAt: r.updatedAt.toISOString(),
+          creatorId: 1,
+          enrollmentCount: 0,
+          completionRate: 0
+        })),
+        ...courses.map(c => ({
+          id: c.id,
+          title: c.title,
+          description: c.description,
+          type: "course" as const,
+          difficulty: c.difficultyLevel || "beginner",
+          status: "published",
+          tags: [],
+          categories: [],
+          createdAt: c.createdAt.toISOString(),
+          updatedAt: c.updatedAt.toISOString(),
+          creatorId: 1,
+          enrollmentCount: 0,
+          completionRate: 0
+        })),
+        ...labs.map(l => ({
+          id: l.id,
+          title: l.name,
+          description: l.description,
+          type: "lab" as const,
+          difficulty: l.difficultyLevel || "beginner",
+          status: "published",
+          tags: [],
+          categories: [],
+          createdAt: l.createdAt.toISOString(),
+          updatedAt: l.updatedAt.toISOString(),
+          creatorId: 1,
+          enrollmentCount: 0,
+          completionRate: 0
+        }))
+      ];
+
+      // Apply filters
+      let filteredItems = contentItems;
+      
+      if (search) {
+        filteredItems = filteredItems.filter(item => 
+          item.title.toLowerCase().includes((search as string).toLowerCase()) ||
+          item.description.toLowerCase().includes((search as string).toLowerCase())
+        );
+      }
+      
+      if (type && type !== "all") {
+        filteredItems = filteredItems.filter(item => item.type === type);
+      }
+      
+      return res.status(200).json(filteredItems);
+    } catch (error) {
+      console.error("Error fetching admin content:", error);
+      return res.status(500).json({ message: "Failed to fetch content" });
+    }
+  });
+
+  // Create new content (admin only)
+  app.post("/api/admin/content", requireAdmin, async (req, res) => {
+    try {
+      const { type, ...contentData } = req.body;
+      
+      let newContent;
+      
+      switch (type) {
+        case "roadmap":
+          const roadmapData = insertRoadmapSchema.parse(contentData);
+          newContent = await storage.createRoadmap(roadmapData);
+          break;
+        case "course":
+          const courseData = insertCourseSchema.parse(contentData);
+          newContent = await storage.createCourse(courseData);
+          break;
+        case "lab":
+          newContent = await storage.createLab({
+            name: contentData.title,
+            description: contentData.description,
+            difficultyLevel: contentData.difficulty || "beginner",
+            estimatedDuration: contentData.duration || 60,
+            status: "active"
+          });
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid content type" });
+      }
+      
+      return res.status(201).json(newContent);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid content data", errors: error.errors });
+      }
+      console.error("Error creating content:", error);
+      return res.status(500).json({ message: "Failed to create content" });
+    }
+  });
+
+  // Update content (admin only)
+  app.patch("/api/admin/content/:id", requireAdmin, async (req, res) => {
+    try {
+      const contentId = parseInt(req.params.id);
+      const { type, ...updates } = req.body;
+      
+      if (isNaN(contentId)) {
+        return res.status(400).json({ message: "Invalid content ID" });
+      }
+      
+      let updatedContent;
+      
+      switch (type) {
+        case "roadmap":
+          updatedContent = await storage.updateRoadmap(contentId, updates);
+          break;
+        case "course":
+          updatedContent = await storage.updateCourse(contentId, updates);
+          break;
+        case "lab":
+          updatedContent = await storage.updateLab(contentId, updates);
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid content type" });
+      }
+      
+      if (!updatedContent) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      
+      return res.status(200).json(updatedContent);
+    } catch (error) {
+      console.error("Error updating content:", error);
+      return res.status(500).json({ message: "Failed to update content" });
+    }
+  });
+
+  // Delete content (admin only)
+  app.delete("/api/admin/content/:id", requireAdmin, async (req, res) => {
+    try {
+      const contentId = parseInt(req.params.id);
+      const { type } = req.query;
+      
+      if (isNaN(contentId)) {
+        return res.status(400).json({ message: "Invalid content ID" });
+      }
+      
+      let deleted;
+      
+      switch (type) {
+        case "roadmap":
+          deleted = await storage.deleteRoadmap(contentId);
+          break;
+        case "course":
+          deleted = await storage.deleteCourse(contentId);
+          break;
+        case "lab":
+          deleted = await storage.deleteLab(contentId);
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid content type" });
+      }
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      
+      return res.status(200).json({ message: "Content deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting content:", error);
+      return res.status(500).json({ message: "Failed to delete content" });
     }
   });
 

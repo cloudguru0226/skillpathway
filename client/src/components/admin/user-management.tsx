@@ -163,30 +163,16 @@ export default function UserManagement() {
   // Create a new user
   const createUserMutation = useMutation({
     mutationFn: async (userData: { username: string; email: string; password: string; isAdmin: boolean }) => {
-      // In a real app, you would make an API call to create the user
-      // const res = await fetch("/api/admin/users", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(userData),
-      // });
-      // if (!res.ok) throw new Error("Failed to create user");
-      // return await res.json();
-      
-      // For demo purposes, return a mock result
-      return {
-        id: Math.floor(Math.random() * 1000) + 10,
-        username: userData.username,
-        email: userData.email,
-        isAdmin: userData.isAdmin,
-        createdAt: new Date().toISOString().split('T')[0],
-        profile: { name: "", bio: "", avatarUrl: "" },
-        stats: {
-          completedRoadmaps: 0,
-          inProgressRoadmaps: 0,
-          completedCourses: 0,
-          totalProgress: 0
-        }
-      };
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create user");
+      }
+      return await res.json();
     },
     onSuccess: () => {
       toast({
@@ -208,16 +194,15 @@ export default function UserManagement() {
   // Update user (e.g., suspend/unsuspend, promote/demote)
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, updates }: { userId: number; updates: Partial<User> }) => {
-      // In a real app, you would make an API call to update the user
-      // const res = await fetch(`/api/admin/users/${userId}`, {
-      //   method: "PATCH",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(updates),
-      // });
-      // if (!res.ok) throw new Error("Failed to update user");
-      // return { userId, updates };
-      
-      // For demo purposes, return the userId and updates
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update user");
+      }
       return { userId, updates };
     },
     onSuccess: ({ userId, updates }) => {
