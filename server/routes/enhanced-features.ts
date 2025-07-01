@@ -136,25 +136,26 @@ export function registerEnhancedFeatures(app: Express) {
   });
 
   // Admin Content Management APIs
-  app.get("/api/admin/content", async (req, res) => {
-    if (!req.isAuthenticated() || !req.user!.isAdmin) return res.sendStatus(403);
-    
-    try {
-      const { search, status, type } = req.query;
-      
-      const filters = {
-        search: search as string,
-        status: status as string,
-        type: type as string
-      };
-      
-      const content = await storage.getContentForAdmin(filters);
-      res.json(content);
-    } catch (error) {
-      console.error("Error fetching admin content:", error);
-      res.status(500).json({ error: "Failed to fetch content" });
-    }
-  });
+  // Disabled - using main routes.ts implementation instead
+  // app.get("/api/admin/content", async (req, res) => {
+  //   if (!req.isAuthenticated() || !req.user!.isAdmin) return res.sendStatus(403);
+  //   
+  //   try {
+  //     const { search, status, type } = req.query;
+  //     
+  //     const filters = {
+  //       search: search as string,
+  //       status: status as string,
+  //       type: type as string
+  //     };
+  //     
+  //     const content = await storage.getContentForAdmin(filters);
+  //     res.json(content);
+  //   } catch (error) {
+  //     console.error("Error fetching admin content:", error);
+  //     res.status(500).json({ error: "Failed to fetch content" });
+  //   }
+  // });
 
   app.post("/api/admin/content", async (req, res) => {
     if (!req.isAuthenticated() || !req.user!.isAdmin) return res.sendStatus(403);

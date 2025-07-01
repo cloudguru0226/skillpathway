@@ -246,8 +246,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: l.name,
           description: l.description,
           type: "lab" as const,
-          difficulty: l.difficultyLevel || "beginner",
-          status: l.status === "active" ? "published" : "draft",
+          difficulty: l.difficulty || "beginner",
+          status: l.isActive ? "published" : "draft",
           tags: [],
           categories: [],
           createdAt: l.createdAt.toISOString(),
@@ -295,12 +295,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           newContent = await storage.createLabEnvironment({
             name: contentData.title,
             description: contentData.description,
-            difficultyLevel: contentData.difficulty || "beginner",
-            estimatedDuration: contentData.duration || 60,
-            status: "active",
-            terraformConfig: "# Basic lab configuration",
-            environmentVariables: {},
-            resourceLimits: {}
+            difficulty: contentData.difficulty || "beginner",
+            estimatedTime: contentData.duration || 60,
+            terraformConfigUrl: "https://github.com/example/terraform-config",
+            terraformVersion: "1.0.0",
+            providerConfig: {},
+            variables: {},
+            tags: [],
+            isActive: true
           });
           break;
         default:
