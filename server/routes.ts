@@ -220,14 +220,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all content types
       const roadmaps = await storage.getRoadmaps();
-      
-      // Get lab environments as "labs"
+      const courses = await storage.getCourses();
       const labEnvironments = await storage.getLabEnvironments();
       
-      // Format as content items
+      // Format as content items with unique IDs per type
       const contentItems = [
         ...roadmaps.map(r => ({
-          id: r.id,
+          id: `roadmap-${r.id}`,
+          contentId: r.id,
           title: r.title,
           description: r.description,
           type: "roadmap" as const,
@@ -241,14 +241,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           enrollmentCount: 0,
           completionRate: 0
         })),
+        ...courses.map(c => ({
+          id: `course-${c.id}`,
+          contentId: c.id,
+          title: c.title,
+          description: c.description,
+          type: "course" as const,
+          difficulty: c.difficulty || "beginner",
+          status: c.status || "published",
+          tags: c.tags || [],
+          categories: [],
+          createdAt: c.createdAt.toISOString(),
+          updatedAt: c.updatedAt.toISOString(),
+          creatorId: c.creatorId || 1,
+          enrollmentCount: 0,
+          completionRate: 0
+        })),
         ...labEnvironments.map(l => ({
-          id: l.id,
+          id: `lab-${l.id}`,
+          contentId: l.id,
           title: l.name,
           description: l.description,
           type: "lab" as const,
           difficulty: l.difficulty || "beginner",
           status: l.isActive ? "published" : "draft",
-          tags: [],
+          tags: l.tags || [],
           categories: [],
           createdAt: l.createdAt.toISOString(),
           updatedAt: l.updatedAt.toISOString(),
@@ -290,6 +307,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case "roadmap":
           const roadmapData = insertRoadmapSchema.parse(contentData);
           newContent = await storage.createRoadmap(roadmapData);
+          break;
+        case "course":
+          newContent = await storage.createCourse({
+            title: contentData.title,
+            description: contentData.description,
+            objectives: [],
+            prerequisites: [],
+            coverImageUrl: null,
+            duration: contentData.duration || 60,
+            difficulty: contentData.difficulty || "beginner",
+            status: "published",
+            enrollmentType: "open",
+            price: 0,
+            creatorId: 1,
+            tags: []
+          });
           break;
         case "lab":
           newContent = await storage.createLabEnvironment({
@@ -335,6 +368,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case "roadmap":
           updatedContent = await storage.updateRoadmap(contentId, updates);
           break;
+        case "course":
+          updatedContent = await storage.updateCourse(contentId, updates);
+          break;
         case "lab":
           updatedContent = await storage.updateLabEnvironment(contentId, updates);
           break;
@@ -368,6 +404,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       switch (type) {
         case "roadmap":
           deleted = await storage.deleteRoadmap(contentId);
+          break;
+        case "course":
+          deleted = await storage.deleteCourse(contentId);
           break;
         case "lab":
           deleted = await storage.deleteLabEnvironment(contentId);

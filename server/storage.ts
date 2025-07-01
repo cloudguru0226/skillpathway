@@ -2559,6 +2559,61 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+
+  // Course Management Methods
+  async getCourses(): Promise<Course[]> {
+    try {
+      const allCourses = await db.select().from(courses).orderBy(asc(courses.id));
+      return allCourses;
+    } catch (error) {
+      console.error("Error getting courses:", error);
+      return [];
+    }
+  }
+
+  async getCourse(id: number): Promise<Course | undefined> {
+    try {
+      const [course] = await db.select().from(courses).where(eq(courses.id, id));
+      return course;
+    } catch (error) {
+      console.error("Error getting course:", error);
+      return undefined;
+    }
+  }
+
+  async createCourse(courseData: InsertCourse): Promise<Course> {
+    try {
+      const [newCourse] = await db.insert(courses).values(courseData).returning();
+      return newCourse;
+    } catch (error) {
+      console.error("Error creating course:", error);
+      throw error;
+    }
+  }
+
+  async updateCourse(id: number, updates: Partial<Course>): Promise<Course | undefined> {
+    try {
+      const [updated] = await db
+        .update(courses)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(courses.id, id))
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error("Error updating course:", error);
+      return undefined;
+    }
+  }
+
+  async deleteCourse(id: number): Promise<boolean> {
+    try {
+      await db.delete(courses).where(eq(courses.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting course:", error);
+      return false;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
