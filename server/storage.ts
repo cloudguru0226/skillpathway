@@ -1732,6 +1732,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserLevel(id: number, levelData: Partial<UserLevel>): Promise<UserLevel | undefined> {
     const [updatedLevel] = await db
+```text
       .update(userLevels)
       .set(levelData)
       .where(eq(userLevels.id, id))
