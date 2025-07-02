@@ -13,8 +13,10 @@ passport.use(new LocalStrategy(
     try {
       const user = await db.getUserByUsername(username);
       if (!user) return done(null, false, { message: 'Incorrect username.' });
+
       const isMatch = await comparePasswords(password, user.password);
       if (!isMatch) return done(null, false, { message: 'Incorrect password.' });
+
       return done(null, user);
     } catch (err) {
       return done(err);
@@ -45,10 +47,10 @@ export function setupAuth(app, pgPool) {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,  // ✅ THIS IS THE FIX
+      secure: false,          // ✅ Make sure cookies are set over HTTP (local/dev)
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 1 week
     }
   }));
 
@@ -56,6 +58,7 @@ export function setupAuth(app, pgPool) {
   app.use(passport.session());
 
   app.post('/api/login', passport.authenticate('local'), (req, res) => {
+    console.log('✅ Login success', req.user);  // TEMP DEBUG
     res.json({
       id: req.user.id,
       username: req.user.username,
@@ -64,8 +67,9 @@ export function setupAuth(app, pgPool) {
     });
   });
 
-  app.post('/api/logout', (req, res) => {
-    req.logout(() => {
+  app.post('/api/logout', (req, res, next) => {
+    req.logout((err) => {
+      if (err) return next(err);
       res.json({ message: 'Logged out successfully' });
     });
   });
