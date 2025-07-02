@@ -56,7 +56,7 @@ export interface IStorage {
     totalLabEnvironments?: number;
     activeLabInstances?: number;
   }>;
-  
+
   getUserEngagement(days: number): Promise<{
     dates: string[];
     logins: number[];
@@ -66,12 +66,12 @@ export interface IStorage {
     labAccess?: number[];
     courseInteractions?: number[];
   }>;
-  
+
   getLearningVelocity(): Promise<{
     users: {userId: number; username: string; avgNodesPerWeek: number; lastActive: Date}[];
     overall: {period: string; average: number}[];
   }>;
-  
+
   getRoadmapPopularity(): Promise<{
     roadmapId: number;
     title: string;
@@ -79,19 +79,19 @@ export interface IStorage {
     completionRate: number;
     averageTimeSpent: number;
   }[]>;
-  
+
   getExperienceProgression(): Promise<{
     levels: {level: number; userCount: number}[];
     xpSources: {source: string; percentage: number}[];
     avgDaysToLevel: {level: number; days: number}[];
   }>;
-  
+
   getActiveUsers(period: string): Promise<{
     count: number;
     trend: number;
     byDay: {day: string; count: number}[];
   }>;
-  
+
   getLaboratoryUsage(): Promise<{
     totalProvisionedLabs: number;
     activeInstances: number;
@@ -105,7 +105,7 @@ export interface IStorage {
       averageCompletionRate: number;
     }[];
   }>;
-  
+
   getCourseAnalytics(): Promise<{
     totalEnrollments: number;
     activeCourses: number;
@@ -130,7 +130,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
-  
+
   // RBAC methods
   getRoles(): Promise<Role[]>;
   getRole(id: number): Promise<Role | undefined>;
@@ -138,31 +138,31 @@ export interface IStorage {
   createRole(role: InsertRole): Promise<Role>;
   updateRole(id: number, role: Partial<Role>): Promise<Role | undefined>;
   deleteRole(id: number): Promise<boolean>;
-  
+
   getUserRoles(userId: number): Promise<(Role & { assignedAt: Date })[]>;
   assignRoleToUser(userRole: InsertUserRole): Promise<UserRole>;
   removeRoleFromUser(userId: number, roleId: number): Promise<boolean>;
   hasPermission(userId: number, permission: string): Promise<boolean>;
-  
+
   // Terraform Lab Integration methods
   getLabEnvironments(filters?: { difficulty?: string; tags?: string[]; isActive?: boolean }): Promise<LabEnvironment[]>;
   getLabEnvironment(id: number): Promise<LabEnvironment | undefined>;
   createLabEnvironment(environment: InsertLabEnvironment): Promise<LabEnvironment>;
   updateLabEnvironment(id: number, updates: Partial<LabEnvironment>): Promise<LabEnvironment | undefined>;
   deleteLabEnvironment(id: number): Promise<boolean>;
-  
+
   getLabInstance(id: number): Promise<LabInstance | undefined>;
   getUserLabInstances(userId: number): Promise<LabInstance[]>;
   createLabInstance(instance: InsertLabInstance): Promise<LabInstance>;
   updateLabInstanceState(id: number, state: string, details?: any): Promise<LabInstance | undefined>;
   terminateLabInstance(id: number): Promise<boolean>;
-  
+
   getLabTasks(environmentId: number): Promise<LabTask[]>;
   getLabTask(id: number): Promise<LabTask | undefined>;
   createLabTask(task: InsertLabTask): Promise<LabTask>;
   updateLabTask(id: number, updates: Partial<LabTask>): Promise<LabTask | undefined>;
   deleteLabTask(id: number): Promise<boolean>;
-  
+
   getLabTaskProgress(userId: number, instanceId: number): Promise<UserLabTaskProgress[]>;
   updateLabTaskProgress(progress: InsertUserLabTaskProgress): Promise<UserLabTaskProgress>;
   verifyLabTask(userId: number, instanceId: number, taskId: number, solution: string): Promise<{ 
@@ -171,39 +171,39 @@ export interface IStorage {
     points: number;
     completedTask?: UserLabTaskProgress;
   }>;
-  
+
   getLabResources(environmentId: number): Promise<LabResource[]>;
   createLabResource(resource: InsertLabResource): Promise<LabResource>;
   updateLabResource(id: number, updates: Partial<LabResource>): Promise<LabResource | undefined>;
   deleteLabResource(id: number): Promise<boolean>;
-  
+
   // LMS Enhancement methods
   getCourses(filters?: { difficulty?: string; tags?: string[]; status?: string }): Promise<Course[]>;
   getCourse(id: number): Promise<Course | undefined>;
   createCourse(course: InsertCourse): Promise<Course>;
   updateCourse(id: number, updates: Partial<Course>): Promise<Course | undefined>;
   deleteCourse(id: number): Promise<boolean>;
-  
+
   getCourseModules(courseId: number): Promise<CourseModule[]>;
   getCourseModule(id: number): Promise<CourseModule | undefined>;
   createCourseModule(module: InsertCourseModule): Promise<CourseModule>;
   updateCourseModule(id: number, updates: Partial<CourseModule>): Promise<CourseModule | undefined>;
   deleteCourseModule(id: number): Promise<boolean>;
-  
+
   getCourseContentItems(moduleId: number): Promise<CourseContentItem[]>;
   getCourseContentItem(id: number): Promise<CourseContentItem | undefined>;
   createCourseContentItem(item: InsertCourseContentItem): Promise<CourseContentItem>;
   updateCourseContentItem(id: number, updates: Partial<CourseContentItem>): Promise<CourseContentItem | undefined>;
   deleteCourseContentItem(id: number): Promise<boolean>;
-  
+
   enrollUserInCourse(enrollment: InsertCourseEnrollment): Promise<CourseEnrollment>;
   getUserEnrollments(userId: number): Promise<CourseEnrollment[]>;
   getCourseEnrollments(courseId: number): Promise<CourseEnrollment[]>;
   updateEnrollmentProgress(userId: number, courseId: number, updates: Partial<CourseEnrollment>): Promise<CourseEnrollment | undefined>;
-  
+
   getUserContentProgress(userId: number, contentItemId: number): Promise<ContentProgress | undefined>;
   updateContentProgress(progress: InsertContentProgress): Promise<ContentProgress>;
-  
+
   issueCertificate(certificate: InsertCertificate): Promise<Certificate>;
   getUserCertificates(userId: number): Promise<Certificate[]>;
   verifyCertificate(verificationCode: string): Promise<Certificate | undefined>;
@@ -343,7 +343,7 @@ export class MemStorage implements IStorage {
   private discussionReplies: Map<number, DiscussionReply>;
   private blogPosts: Map<number, BlogPost>;
   private blogPostsBySlug: Map<string, number>;
-  
+
   // IDs for records
   private userCounter: number;
   private roadmapCounter: number;
@@ -364,7 +364,7 @@ export class MemStorage implements IStorage {
   private discussionTopicCounter: number;
   private discussionReplyCounter: number;
   private blogPostCounter: number;
-  
+
   sessionStore: session.Store;
 
   constructor() {
@@ -388,7 +388,7 @@ export class MemStorage implements IStorage {
     this.discussionReplies = new Map();
     this.blogPosts = new Map();
     this.blogPostsBySlug = new Map();
-    
+
     this.userCounter = 1;
     this.roadmapCounter = 1;
     this.progressCounter = 1;
@@ -408,15 +408,15 @@ export class MemStorage implements IStorage {
     this.discussionTopicCounter = 1;
     this.discussionReplyCounter = 1;
     this.blogPostCounter = 1;
-    
+
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
     });
-    
+
     // Initialize default user levels
     this.initializeDefaultUserLevels();
   }
-  
+
   private async initializeDefaultUserLevels() {
     // Create default user levels (1-10)
     const defaultLevels = [
@@ -431,7 +431,7 @@ export class MemStorage implements IStorage {
       { level: 9, experienceRequired: 3600, title: "Authority", description: "Recognized authority", benefits: "+4 skill points" },
       { level: 10, experienceRequired: 4500, title: "Luminary", description: "Leading the field", benefits: "+5 skill points & all roadmaps" },
     ];
-    
+
     for (const levelData of defaultLevels) {
       await this.createUserLevel(levelData);
     }
@@ -470,7 +470,7 @@ export class MemStorage implements IStorage {
   async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
     const user = this.users.get(id);
     if (!user) return undefined;
-    
+
     const updatedUser = { ...user, ...userData };
     this.users.set(id, updatedUser);
     return updatedUser;
@@ -505,7 +505,7 @@ export class MemStorage implements IStorage {
   async updateRoadmap(id: number, roadmapData: Partial<Roadmap>): Promise<Roadmap | undefined> {
     const roadmap = this.roadmaps.get(id);
     if (!roadmap) return undefined;
-    
+
     const updatedRoadmap = { 
       ...roadmap, 
       ...roadmapData,
@@ -523,7 +523,7 @@ export class MemStorage implements IStorage {
   async getUserProgress(userId: number, roadmapId?: number): Promise<UserProgress[]> {
     const allProgress = Array.from(this.userProgress.values())
       .filter(progress => progress.userId === userId);
-    
+
     if (roadmapId) {
       return allProgress.filter(progress => progress.roadmapId === roadmapId);
     }
@@ -534,7 +534,7 @@ export class MemStorage implements IStorage {
     const id = this.progressCounter++;
     const now = new Date();
     const progressKey = `${insertProgress.userId}-${insertProgress.roadmapId}`;
-    
+
     const progress: UserProgress = {
       ...insertProgress,
       id,
@@ -542,7 +542,7 @@ export class MemStorage implements IStorage {
       startedAt: now,
       updatedAt: now
     };
-    
+
     this.userProgress.set(progressKey, progress);
     return progress;
   }
@@ -551,14 +551,14 @@ export class MemStorage implements IStorage {
     const progressKey = `${userId}-${roadmapId}`;
     const progress = this.userProgress.get(progressKey);
     if (!progress) return undefined;
-    
+
     const updatedProgress = { 
       ...progress, 
       ...progressData,
       lastAccessedAt: new Date(),
       updatedAt: new Date()
     };
-    
+
     this.userProgress.set(progressKey, updatedProgress);
     return updatedProgress;
   }
@@ -573,13 +573,13 @@ export class MemStorage implements IStorage {
     const id = this.bookmarkCounter++;
     const now = new Date();
     const bookmarkKey = `${insertBookmark.userId}-${insertBookmark.roadmapId}`;
-    
+
     const bookmark: Bookmark = {
       ...insertBookmark,
       id,
       createdAt: now
     };
-    
+
     this.bookmarks.set(bookmarkKey, bookmark);
     return bookmark;
   }
@@ -597,13 +597,13 @@ export class MemStorage implements IStorage {
   // Activity Log methods
   async getActivityLogs(userId: number, days?: number): Promise<ActivityLog[]> {
     let logs = this.activityLogs.filter(log => log.userId === userId);
-    
+
     if (days) {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);
       logs = logs.filter(log => log.date >= cutoffDate);
     }
-    
+
     return logs;
   }
 
@@ -614,7 +614,7 @@ export class MemStorage implements IStorage {
       id,
       date: new Date()
     };
-    
+
     this.activityLogs.push(log);
     return log;
   }
@@ -641,7 +641,7 @@ export class MemStorage implements IStorage {
   async updateUserLevel(id: number, levelData: Partial<UserLevel>): Promise<UserLevel | undefined> {
     const level = this.userLevels.get(id);
     if (!level) return undefined;
-    
+
     const updatedLevel = { ...level, ...levelData };
     this.userLevels.set(id, updatedLevel);
     return updatedLevel;
@@ -667,7 +667,7 @@ export class MemStorage implements IStorage {
   async updateUserExperience(userId: number, expData: Partial<UserExperience>): Promise<UserExperience | undefined> {
     const exp = Array.from(this.userExperiences.values()).find(e => e.userId === userId);
     if (!exp) return undefined;
-    
+
     const updatedExp = { 
       ...exp, 
       ...expData, 
@@ -824,7 +824,7 @@ export class MemStorage implements IStorage {
     const id = this.userBadgeCounter++;
     const key = `${userId}-${badgeId}`;
     const now = new Date();
-    
+
     const userBadge: UserBadge & { badge: Badge } = {
       id,
       userId,
@@ -875,7 +875,7 @@ export class MemStorage implements IStorage {
   async createUserSkill(insertSkill: InsertUserSkill): Promise<UserSkill> {
     const id = this.userSkillCounter++;
     const key = `${insertSkill.userId}-${insertSkill.skillName}`;
-    
+
     const skill: UserSkill = {
       ...insertSkill,
       id
@@ -887,7 +887,7 @@ export class MemStorage implements IStorage {
   async updateUserSkill(userId: number, skillName: string, points: number): Promise<UserSkill | undefined> {
     const key = `${userId}-${skillName}`;
     const skill = this.userSkills.get(key);
-    
+
     if (!skill) {
       // Create skill if it doesn't exist
       return this.createUserSkill({
@@ -897,17 +897,17 @@ export class MemStorage implements IStorage {
         pointsInvested: points
       });
     }
-    
+
     // Calculate new skill level based on points
     const totalPoints = skill.pointsInvested + points;
     const newLevel = Math.floor(Math.sqrt(totalPoints / 10)) + 1;
-    
+
     const updatedSkill: UserSkill = {
       ...skill,
       pointsInvested: totalPoints,
       skillLevel: newLevel
     };
-    
+
     this.userSkills.set(key, updatedSkill);
     return updatedSkill;
   }
@@ -917,24 +917,24 @@ export class MemStorage implements IStorage {
     let transactions = this.experienceTransactions
       .filter(tx => tx.userId === userId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      
+
     if (limit) {
       transactions = transactions.slice(0, limit);
     }
-    
+
     return transactions;
   }
 
   async createExperienceTransaction(insertTransaction: InsertExperienceTransaction): Promise<ExperienceTransaction> {
     const id = this.experienceTransactionCounter++;
     const now = new Date();
-    
+
     const transaction: ExperienceTransaction = {
       ...insertTransaction,
       id,
       createdAt: now
     };
-    
+
     this.experienceTransactions.push(transaction);
     return transaction;
   }
@@ -951,7 +951,7 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
-  
+
   async getPlatformStats(): Promise<{
     totalUsers: number;
     totalRoadmaps: number;
@@ -964,25 +964,25 @@ export class DatabaseStorage implements IStorage {
       // Get total users count
       const users = await db.select({ count: count() }).from(schema.users);
       const totalUsers = Number(users[0].count) || 0;
-      
+
       // Get total roadmaps count
       const roadmapsCount = await db.select({ count: count() }).from(schema.roadmaps);
       const totalRoadmaps = Number(roadmapsCount[0].count) || 0;
-      
+
       // For now, estimate active users as 70% of total users for demo purposes
       const activeUsers = Math.ceil(totalUsers * 0.7);
-      
+
       // Get total comments
       const commentsCount = await db.select({ count: count() }).from(schema.comments);
       const totalComments = Number(commentsCount[0].count) || 0;
-      
+
       // Get total discussions
       const discussionsCount = await db.select({ count: count() }).from(schema.discussionTopics);
       const totalDiscussions = Number(discussionsCount[0].count) || 0;
-      
+
       // For demo purposes, assign a reasonable average completion rate
       const averageCompletionRate = 47.5;
-      
+
       return {
         totalUsers,
         totalRoadmaps,
@@ -1004,7 +1004,7 @@ export class DatabaseStorage implements IStorage {
       };
     }
   }
-  
+
   async getUserEngagement(days: number): Promise<{
     dates: string[];
     logins: number[];
@@ -1014,21 +1014,21 @@ export class DatabaseStorage implements IStorage {
   }> {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
-    
+
     // Generate array of dates for the last n days
     const dates: string[] = [];
     const logins: number[] = Array(days).fill(0);
     const comments: number[] = Array(days).fill(0);
     const discussions: number[] = Array(days).fill(0);
     const progress: number[] = Array(days).fill(0);
-    
+
     for (let i = 0; i < days; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       // Format as YYYY-MM-DD
       dates.unshift(date.toISOString().split('T')[0]);
     }
-    
+
     // Get login activity (from activity logs)
     const loginActivities = await db.select({
       timestamp: schema.activityLogs.timestamp,
@@ -1039,7 +1039,7 @@ export class DatabaseStorage implements IStorage {
       eq(schema.activityLogs.activityType, 'login'),
       gt(schema.activityLogs.timestamp, startDate)
     ));
-    
+
     // Count login activities by day
     for (const activity of loginActivities) {
       const activityDate = activity.timestamp.toISOString().split('T')[0];
@@ -1048,14 +1048,14 @@ export class DatabaseStorage implements IStorage {
         logins[dateIndex]++;
       }
     }
-    
+
     // Get comment activities
     const commentActivities = await db.select({
       createdAt: schema.comments.createdAt
     })
     .from(schema.comments)
     .where(gt(schema.comments.createdAt, startDate));
-    
+
     // Count comment activities by day
     for (const activity of commentActivities) {
       const activityDate = activity.createdAt.toISOString().split('T')[0];
@@ -1064,14 +1064,14 @@ export class DatabaseStorage implements IStorage {
         comments[dateIndex]++;
       }
     }
-    
+
     // Get discussion activities
     const discussionActivities = await db.select({
       createdAt: schema.discussionTopics.createdAt
     })
     .from(schema.discussionTopics)
     .where(gt(schema.discussionTopics.createdAt, startDate));
-    
+
     // Count discussion activities by day
     for (const activity of discussionActivities) {
       const activityDate = activity.createdAt.toISOString().split('T')[0];
@@ -1080,14 +1080,14 @@ export class DatabaseStorage implements IStorage {
         discussions[dateIndex]++;
       }
     }
-    
+
     // Get progress update activities
     const progressActivities = await db.select({
       updatedAt: schema.userProgress.updatedAt
     })
     .from(schema.userProgress)
     .where(gt(schema.userProgress.updatedAt, startDate));
-    
+
     // Count progress update activities by day
     for (const activity of progressActivities) {
       const activityDate = activity.updatedAt.toISOString().split('T')[0];
@@ -1096,7 +1096,7 @@ export class DatabaseStorage implements IStorage {
         progress[dateIndex]++;
       }
     }
-    
+
     return {
       dates,
       logins,
@@ -1105,7 +1105,7 @@ export class DatabaseStorage implements IStorage {
       progress
     };
   }
-  
+
   async getLearningVelocity(): Promise<{
     users: { userId: number; username: string; avgNodesPerWeek: number; lastActive: Date }[];
     overall: { period: string; average: number }[];
@@ -1118,7 +1118,7 @@ export class DatabaseStorage implements IStorage {
       updatedAt: schema.userProgress.updatedAt
     })
     .from(schema.userProgress);
-    
+
     // Process to calculate learning velocity
     const userVelocities: Map<number, {
       userId: number;
@@ -1127,20 +1127,20 @@ export class DatabaseStorage implements IStorage {
       lastActive: Date;
       daysSinceStart: number;
     }> = new Map();
-    
+
     // Calculate velocity for each user
     for (const entry of progressData) {
       const progress = entry.progress as any;
       if (!progress || !progress.completedNodes) continue;
-      
+
       const userId = entry.userId;
       const completedNodes = progress.completedNodes || 0;
       const startedAt = entry.startedAt;
       const updatedAt = entry.updatedAt;
-      
+
       const today = new Date();
       const daysSinceStart = Math.max(1, Math.ceil((today.getTime() - startedAt.getTime()) / (1000 * 60 * 60 * 24)));
-      
+
       if (userVelocities.has(userId)) {
         const existing = userVelocities.get(userId)!;
         userVelocities.set(userId, {
@@ -1160,10 +1160,10 @@ export class DatabaseStorage implements IStorage {
         });
       }
     }
-    
+
     // Calculate average nodes per week for each user
     const userResults: { userId: number; username: string; avgNodesPerWeek: number; lastActive: Date }[] = [];
-    
+
     // Fetch usernames for all users with velocity data
     const userIds = Array.from(userVelocities.keys());
     const usernames = await db.select({
@@ -1172,15 +1172,15 @@ export class DatabaseStorage implements IStorage {
     })
     .from(schema.users)
     .where(inArray(schema.users.id, userIds));
-    
+
     // Create a map of user IDs to usernames
     const usernameMap = new Map(usernames.map(u => [u.id, u.username]));
-    
+
     // Calculate velocity for each user
     for (const [userId, data] of userVelocities.entries()) {
       const weeksActive = Math.max(1, data.daysSinceStart / 7);
       const avgNodesPerWeek = Number((data.completedNodes / weeksActive).toFixed(2));
-      
+
       userResults.push({
         userId,
         username: usernameMap.get(userId) || `User ${userId}`,
@@ -1188,21 +1188,21 @@ export class DatabaseStorage implements IStorage {
         lastActive: data.lastActive
       });
     }
-    
+
     // Sort by velocity (highest first)
     userResults.sort((a, b) => b.avgNodesPerWeek - a.avgNodesPerWeek);
-    
+
     // Calculate overall averages for different time periods
     let totalNodesCompleted = 0;
     let totalDays = 0;
-    
+
     for (const data of userVelocities.values()) {
       totalNodesCompleted += data.completedNodes;
       totalDays += data.daysSinceStart;
     }
-    
+
     const avgNodesPerDay = totalDays > 0 ? totalNodesCompleted / totalDays : 0;
-    
+
     return {
       users: userResults,
       overall: [
@@ -1212,7 +1212,7 @@ export class DatabaseStorage implements IStorage {
       ]
     };
   }
-  
+
   async getRoadmapPopularity(): Promise<{
     roadmapId: number;
     title: string;
@@ -1225,7 +1225,7 @@ export class DatabaseStorage implements IStorage {
       id: schema.roadmaps.id,
       title: schema.roadmaps.title
     }).from(schema.roadmaps);
-    
+
     const results: {
       roadmapId: number;
       title: string;
@@ -1233,7 +1233,7 @@ export class DatabaseStorage implements IStorage {
       completionRate: number;
       averageTimeSpent: number;
     }[] = [];
-    
+
     // For each roadmap, get popularity metrics
     for (const roadmap of roadmaps) {
       // Get user progress for this roadmap
@@ -1245,31 +1245,31 @@ export class DatabaseStorage implements IStorage {
       })
       .from(schema.userProgress)
       .where(eq(schema.userProgress.roadmapId, roadmap.id));
-      
+
       const userCount = progressEntries.length;
-      
+
       // Calculate completion rate
       let totalCompletionRate = 0;
       let totalTimeSpent = 0;
-      
+
       for (const entry of progressEntries) {
         const progress = entry.progress as any;
         if (progress && progress.completedNodes && progress.totalNodes) {
           totalCompletionRate += (progress.completedNodes / progress.totalNodes) * 100;
-          
+
           // Calculate time spent (in hours)
           const startTime = entry.startedAt.getTime();
           const latestTime = entry.updatedAt.getTime();
           const diffHours = (latestTime - startTime) / (1000 * 60 * 60);
-          
+
           // Cap time spent at a reasonable maximum per roadmap (48 hours)
           totalTimeSpent += Math.min(diffHours, 48);
         }
       }
-      
+
       const completionRate = userCount > 0 ? Number((totalCompletionRate / userCount).toFixed(2)) : 0;
       const averageTimeSpent = userCount > 0 ? Number((totalTimeSpent / userCount).toFixed(2)) : 0;
-      
+
       results.push({
         roadmapId: roadmap.id,
         title: roadmap.title,
@@ -1278,11 +1278,11 @@ export class DatabaseStorage implements IStorage {
         averageTimeSpent
       });
     }
-    
+
     // Sort by user count (descending)
     return results.sort((a, b) => b.userCount - a.userCount);
   }
-  
+
   async getExperienceProgression(): Promise<{
     levels: { level: number; userCount: number }[];
     xpSources: { source: string; percentage: number }[];
@@ -1295,38 +1295,38 @@ export class DatabaseStorage implements IStorage {
       totalExperience: schema.userExperience.totalExperience,
       updatedAt: schema.userExperience.updatedAt
     }).from(schema.userExperience);
-    
+
     // Count users at each level
     const levelCounts = new Map<number, number>();
-    
+
     for (const data of userExperienceData) {
       const level = data.currentLevel;
       levelCounts.set(level, (levelCounts.get(level) || 0) + 1);
     }
-    
+
     // Convert to array of {level, userCount}
     const levels = Array.from(levelCounts.entries()).map(([level, userCount]) => ({
       level,
       userCount
     })).sort((a, b) => a.level - b.level);
-    
+
     // Get experience transaction sources
     const xpTransactions = await db.select({
       amount: schema.experienceTransactions.amount,
       reason: schema.experienceTransactions.reason
     }).from(schema.experienceTransactions);
-    
+
     // Group by reason and calculate percentages
     const xpBySource = new Map<string, number>();
     let totalXP = 0;
-    
+
     for (const tx of xpTransactions) {
       const source = tx.reason;
       const amount = tx.amount;
       totalXP += amount;
       xpBySource.set(source, (xpBySource.get(source) || 0) + amount);
     }
-    
+
     // Calculate percentages
     const xpSources = Array.from(xpBySource.entries())
       .map(([source, amount]) => ({
@@ -1334,7 +1334,7 @@ export class DatabaseStorage implements IStorage {
         percentage: Number(((amount / totalXP) * 100).toFixed(2))
       }))
       .sort((a, b) => b.percentage - a.percentage);
-    
+
     // Get average days to reach each level
     // This requires level-up events from experience transactions
     const levelUpEvents = await db.select({
@@ -1345,49 +1345,49 @@ export class DatabaseStorage implements IStorage {
     })
     .from(schema.experienceTransactions)
     .where(like(schema.experienceTransactions.reason, 'Level up to%'));
-    
+
     // Group level-up events by user and calculate days between levels
     const userLevelUps = new Map<number, Map<number, Date>>();
-    
+
     for (const event of levelUpEvents) {
       const userId = event.userId;
       const levelMatch = event.reason.match(/Level up to (\d+)/);
       if (!levelMatch) continue;
-      
+
       const level = parseInt(levelMatch[1]);
       const date = event.createdAt;
-      
+
       if (!userLevelUps.has(userId)) {
         userLevelUps.set(userId, new Map());
       }
-      
+
       userLevelUps.get(userId)!.set(level, date);
     }
-    
+
     // Calculate average days to reach each level
     const levelDaysSum = new Map<number, { total: number, count: number }>();
-    
+
     for (const [userId, levelDates] of userLevelUps.entries()) {
       const levels = Array.from(levelDates.keys()).sort((a, b) => a - b);
-      
+
       for (let i = 1; i < levels.length; i++) {
         const previousLevel = levels[i - 1];
         const currentLevel = levels[i];
         const previousDate = levelDates.get(previousLevel)!;
         const currentDate = levelDates.get(currentLevel)!;
-        
+
         const daysDiff = (currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24);
-        
+
         if (!levelDaysSum.has(currentLevel)) {
           levelDaysSum.set(currentLevel, { total: 0, count: 0 });
         }
-        
+
         const data = levelDaysSum.get(currentLevel)!;
         data.total += daysDiff;
         data.count += 1;
       }
     }
-    
+
     // Convert to array of {level, days}
     const avgDaysToLevel = Array.from(levelDaysSum.entries())
       .map(([level, data]) => ({
@@ -1395,21 +1395,21 @@ export class DatabaseStorage implements IStorage {
         days: Number((data.total / data.count).toFixed(2))
       }))
       .sort((a, b) => a.level - b.level);
-    
+
     return {
       levels,
       xpSources,
       avgDaysToLevel
     };
   }
-  
+
   async getActiveUsers(period: string): Promise<{
     count: number;
     trend: number;
     byDay: { day: string; count: number }[];
   }> {
     let daysToLookBack = 7;
-    
+
     // Set time period based on input
     switch (period) {
       case 'day':
@@ -1424,22 +1424,22 @@ export class DatabaseStorage implements IStorage {
       default:
         daysToLookBack = 7;
     }
-    
+
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysToLookBack);
-    
+
     // Previous period for trend calculation
     const previousStartDate = new Date(startDate);
     previousStartDate.setDate(previousStartDate.getDate() - daysToLookBack);
-    
+
     // Query active users in current period
     const activeUsersQuery = await db.select({ userId: schema.activityLogs.userId })
       .from(schema.activityLogs)
       .where(gt(schema.activityLogs.timestamp, startDate))
       .groupBy(schema.activityLogs.userId);
-    
+
     const activeUsersCount = activeUsersQuery.length;
-    
+
     // Query active users in previous period for trend
     const previousActiveUsersQuery = await db.select({ userId: schema.activityLogs.userId })
       .from(schema.activityLogs)
@@ -1448,26 +1448,26 @@ export class DatabaseStorage implements IStorage {
         lt(schema.activityLogs.timestamp, startDate)
       ))
       .groupBy(schema.activityLogs.userId);
-    
+
     const previousActiveUsersCount = previousActiveUsersQuery.length;
-    
+
     // Calculate trend (percentage change)
     let trend = 0;
     if (previousActiveUsersCount > 0) {
       trend = Number((((activeUsersCount - previousActiveUsersCount) / previousActiveUsersCount) * 100).toFixed(2));
     }
-    
+
     // Get daily active users
     const byDay: { day: string; count: number }[] = [];
-    
+
     for (let i = 0; i < daysToLookBack; i++) {
       const dayStart = new Date();
       dayStart.setDate(dayStart.getDate() - i);
       dayStart.setHours(0, 0, 0, 0);
-      
+
       const dayEnd = new Date(dayStart);
       dayEnd.setHours(23, 59, 59, 999);
-      
+
       const dailyActiveUsersQuery = await db.select({ userId: schema.activityLogs.userId })
         .from(schema.activityLogs)
         .where(and(
@@ -1475,17 +1475,67 @@ export class DatabaseStorage implements IStorage {
           lte(schema.activityLogs.timestamp, dayEnd)
         ))
         .groupBy(schema.activityLogs.userId);
-      
+
       byDay.unshift({
         day: dayStart.toISOString().split('T')[0],
         count: dailyActiveUsersQuery.length
       });
     }
-    
+
     return {
       count: activeUsersCount,
       trend,
       byDay
+    };
+  }
+
+  async getLaboratoryUsage(): Promise<{
+    totalProvisionedLabs: number;
+    activeInstances: number;
+    provisioningFailures: number;
+    resourceCost: number;
+    completionRate: number;
+    labPopularity: {
+      id: number;
+      name: string;
+      instances: number;
+      averageCompletionRate: number;
+    }[];
+  }> {
+    // TODO: Implement laboratory usage analytics
+    return {
+      totalProvisionedLabs: 0,
+      activeInstances: 0,
+      provisioningFailures: 0,
+      resourceCost: 0,
+      completionRate: 0,
+      labPopularity: []
+    };
+  }
+
+  async getCourseAnalytics(): Promise<{
+    totalEnrollments: number;
+    activeCourses: number;
+    completionRate: number;
+    popularCourses: {
+      id: number;
+      title: string;
+      enrollments: number;
+      completionRate: number;
+    }[];
+    userProgression: {
+      date: string;
+      newEnrollments: number;
+      completions: number;
+    }[];
+  }> {
+    // TODO: Implement course analytics
+    return {
+      totalEnrollments: 0,
+      activeCourses: 0,
+      completionRate: 0,
+      popularCourses: [],
+      userProgression: []
     };
   }
   sessionStore: session.Store;
@@ -1495,7 +1545,7 @@ export class DatabaseStorage implements IStorage {
       pool,
       createTableIfMissing: true,
     });
-    
+
     // Initialize default user levels - but don't block construction if it fails
     this.initializeDefaultUserLevels().catch(err => {
       console.error("Failed to initialize default user levels, but continuing:", err);
@@ -1715,7 +1765,7 @@ export class DatabaseStorage implements IStorage {
   async awardExperience(userId: number, amount: number, reason: string, roadmapId?: number, nodeId?: string): Promise<UserExperience> {
     // Get or create user experience record
     let userExp = await this.getUserExperience(userId);
-    
+
     if (!userExp) {
       userExp = await this.createUserExperience({
         userId,
@@ -1724,7 +1774,7 @@ export class DatabaseStorage implements IStorage {
         skillPoints: 0
       });
     }
-    
+
     // Create transaction record
     await this.createExperienceTransaction({
       userId,
@@ -1733,16 +1783,16 @@ export class DatabaseStorage implements IStorage {
       roadmapId,
       nodeId
     });
-    
+
     // Calculate new experience and level
     const newTotalExp = userExp.totalExperience + amount;
     let newLevel = userExp.currentLevel;
     let newSkillPoints = userExp.skillPoints;
-    
+
     // Check if user leveled up
     if (newLevel < 10) { // Max level is 10
       const nextLevel = await this.getNextLevel(userExp.currentLevel, newTotalExp);
-      
+
       if (nextLevel > userExp.currentLevel) {
         // Award skill points for leveling up
         const skillPointsGain = await this.calculateSkillPointsGain(userExp.currentLevel, nextLevel);
@@ -1750,7 +1800,7 @@ export class DatabaseStorage implements IStorage {
         newLevel = nextLevel;
       }
     }
-    
+
     // Update user experience
     return this.updateUserExperience(userId, {
       totalExperience: newTotalExp,
@@ -1763,33 +1813,33 @@ export class DatabaseStorage implements IStorage {
     // Get all levels
     const levels = await this.getUserLevels();
     let nextLevel = currentLevel;
-    
+
     // Find the highest level the user qualifies for
     for (const level of levels) {
       if (totalExp >= level.experienceRequired && level.level > nextLevel) {
         nextLevel = level.level;
       }
     }
-    
+
     return nextLevel;
   }
 
   private async calculateSkillPointsGain(oldLevel: number, newLevel: number): Promise<number> {
     let skillPoints = 0;
     const levels = await this.getUserLevels();
-    
+
     // Map levels by level number for easier lookup
     const levelMap = new Map<number, UserLevel>();
     for (const level of levels) {
       levelMap.set(level.level, level);
     }
-    
+
     // Calculate skill points based on level benefits
     for (let i = oldLevel + 1; i <= newLevel; i++) {
       const level = levelMap.get(i);
       if (level) {
         const benefits = level.benefits || "";
-        
+
         if (benefits.includes("+1 skill point")) {
           skillPoints += 1;
         } else if (benefits.includes("+2 skill points")) {
@@ -1803,7 +1853,7 @@ export class DatabaseStorage implements IStorage {
         }
       }
     }
-    
+
     return skillPoints;
   }
 
@@ -1856,7 +1906,7 @@ export class DatabaseStorage implements IStorage {
       .from(userBadges)
       .where(eq(userBadges.userId, userId))
       .innerJoin(badges, eq(userBadges.badgeId, badges.id));
-    
+
     return userBadgesWithBadgeInfo;
   }
 
@@ -1864,19 +1914,19 @@ export class DatabaseStorage implements IStorage {
     // Check if user already has the badge
     const hasBadge = await this.hasBadge(userId, badgeId);
     if (hasBadge) return undefined;
-    
+
     // Get badge to award experience
     const badge = await this.getBadge(badgeId);
     if (badge && badge.experienceAwarded > 0) {
       await this.awardExperience(userId, badge.experienceAwarded, `Earned badge: ${badge.name}`);
     }
-    
+
     // Add badge to user
     const [userBadge] = await db
       .insert(userBadges)
       .values({ userId, badgeId })
       .returning();
-    
+
     // Award skill points if any
     if (badge && badge.skillPointsAwarded > 0) {
       const userExp = await this.getUserExperience(userId);
@@ -1886,10 +1936,10 @@ export class DatabaseStorage implements IStorage {
         });
       }
     }
-    
+
     // Get the full badge information
     const fullBadge = await this.getBadge(badgeId);
-    
+
     return userBadge ? { ...userBadge, badge: fullBadge! } : undefined;
   }
 
@@ -1922,7 +1972,7 @@ export class DatabaseStorage implements IStorage {
   async updateUserSkill(userId: number, skillName: string, points: number): Promise<UserSkill | undefined> {
     // Get existing skill
     const existingSkill = await this.getUserSkill(userId, skillName);
-    
+
     if (!existingSkill) {
       // Create new skill if it doesn't exist
       return this.createUserSkill({
@@ -1932,12 +1982,12 @@ export class DatabaseStorage implements IStorage {
         pointsInvested: points
       });
     }
-    
+
     // Calculate new skill level
     // Every 5 points = 1 level
     const totalPoints = existingSkill.pointsInvested + points;
     const newLevel = Math.floor(totalPoints / 5) + 1;
-    
+
     // Update skill
     const [updatedSkill] = await db
       .update(userSkills)
@@ -1947,7 +1997,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(eq(userSkills.userId, userId), eq(userSkills.skillName, skillName)))
       .returning();
-    
+
     return updatedSkill;
   }
 
@@ -1958,11 +2008,11 @@ export class DatabaseStorage implements IStorage {
       .from(experienceTransactions)
       .where(eq(experienceTransactions.userId, userId))
       .orderBy(desc(experienceTransactions.createdAt));
-    
+
     if (limit) {
       query = query.limit(limit);
     }
-    
+
     return query;
   }
 
@@ -1977,7 +2027,7 @@ export class DatabaseStorage implements IStorage {
   // Comment methods
   async getComments(roadmapId?: number, nodeId?: string): Promise<Comment[]> {
     let query = db.select().from(comments);
-    
+
     if (roadmapId && nodeId) {
       query = query.where(and(
         eq(comments.roadmapId, roadmapId),
@@ -1992,7 +2042,7 @@ export class DatabaseStorage implements IStorage {
     } else {
       query = query.where(isNull(comments.parentId));
     }
-    
+
     return query.orderBy(desc(comments.createdAt));
   }
 
@@ -2018,13 +2068,13 @@ export class DatabaseStorage implements IStorage {
   async deleteComment(id: number): Promise<boolean> {
     // First delete all reactions to this comment
     await db.delete(commentReactions).where(eq(commentReactions.commentId, id));
-    
+
     // Then delete all replies to this comment
     await db.delete(comments).where(eq(comments.parentId, id));
-    
+
     // Finally delete the comment itself
     await db.delete(comments).where(eq(comments.id, id));
-    
+
     return true;
   }
 
@@ -2062,11 +2112,11 @@ export class DatabaseStorage implements IStorage {
           eq(commentReactions.commentId, insertReaction.commentId),
           eq(commentReactions.reaction, insertReaction.reaction)
         ));
-      
+
       if (existingReaction) {
         return existingReaction;
       }
-      
+
       throw error;
     }
   }
@@ -2079,7 +2129,7 @@ export class DatabaseStorage implements IStorage {
         eq(commentReactions.commentId, commentId),
         eq(commentReactions.reaction, reaction)
       ));
-    
+
     return true;
   }
 
@@ -2113,10 +2163,10 @@ export class DatabaseStorage implements IStorage {
   async deleteResource(id: number): Promise<boolean> {
     // First delete references in roadmapNodeResources
     await db.delete(roadmapNodeResources).where(eq(roadmapNodeResources.resourceId, id));
-    
+
     // Then delete the resource
     await db.delete(resources).where(eq(resources.id, id));
-    
+
     return true;
   }
 
@@ -2157,13 +2207,13 @@ export class DatabaseStorage implements IStorage {
         eq(roadmapNodeResources.nodeId, nodeId),
         eq(roadmapNodeResources.resourceId, resourceId)
       ));
-    
+
     return true;
   }
 
   async reorderNodeResources(roadmapId: number, nodeId: string, resourceIds: number[]): Promise<RoadmapNodeResource[]> {
     const updates: Promise<RoadmapNodeResource>[] = [];
-    
+
     // Update order for each resource
     for (let i = 0; i < resourceIds.length; i++) {
       const resourceId = resourceIds[i];
@@ -2176,19 +2226,19 @@ export class DatabaseStorage implements IStorage {
           eq(roadmapNodeResources.resourceId, resourceId)
         ))
         .returning();
-      
+
       if (updated) {
         updates.push(updated);
       }
     }
-    
+
     return updates;
   }
 
   // Discussion Topic methods
   async getDiscussionTopics(roadmapId?: number, nodeId?: string): Promise<DiscussionTopic[]> {
     let query = db.select().from(discussionTopics);
-    
+
     if (roadmapId && nodeId) {
       query = query.where(and(
         eq(discussionTopics.roadmapId, roadmapId),
@@ -2197,7 +2247,7 @@ export class DatabaseStorage implements IStorage {
     } else if (roadmapId) {
       query = query.where(eq(discussionTopics.roadmapId, roadmapId));
     }
-    
+
     return query.orderBy(desc(discussionTopics.createdAt));
   }
 
@@ -2223,10 +2273,10 @@ export class DatabaseStorage implements IStorage {
   async deleteDiscussionTopic(id: number): Promise<boolean> {
     // First delete all replies to this topic
     await db.delete(discussionReplies).where(eq(discussionReplies.topicId, id));
-    
+
     // Then delete the topic itself
     await db.delete(discussionTopics).where(eq(discussionTopics.id, id));
-    
+
     return true;
   }
 
@@ -2235,15 +2285,15 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(discussionTopics)
       .where(eq(discussionTopics.id, id));
-    
+
     if (!topic) return undefined;
-    
+
     const [updatedTopic] = await db
       .update(discussionTopics)
       .set({ viewCount: topic.viewCount + 1 })
       .where(eq(discussionTopics.id, id))
       .returning();
-    
+
     return updatedTopic;
   }
 
@@ -2284,36 +2334,36 @@ export class DatabaseStorage implements IStorage {
     // Get the reply to find its topic
     const [reply] = await db.select().from(discussionReplies).where(eq(discussionReplies.id, id));
     if (!reply) return undefined;
-    
+
     // Reset isAcceptedAnswer for all replies in this topic
     await db
       .update(discussionReplies)
       .set({ isAcceptedAnswer: false })
       .where(eq(discussionReplies.topicId, reply.topicId));
-    
+
     // Mark this reply as accepted
     const [updatedReply] = await db
       .update(discussionReplies)
       .set({ isAcceptedAnswer: true })
       .where(eq(discussionReplies.id, id))
       .returning();
-    
+
     return updatedReply;
   }
 
   // Blog Post methods
   async getBlogPosts(status?: string, tag?: string): Promise<BlogPost[]> {
     let query = db.select().from(blogPosts);
-    
+
     if (status) {
       query = query.where(eq(blogPosts.status, status));
     }
-    
+
     if (tag) {
       // Query for posts that have the tag in their tags array
       query = query.where(sql`${tag} = ANY(${blogPosts.tags})`);
     }
-    
+
     return query.orderBy(desc(blogPosts.createdAt));
   }
 
@@ -2349,13 +2399,13 @@ export class DatabaseStorage implements IStorage {
   async incrementBlogPostViewCount(id: number): Promise<BlogPost | undefined> {
     const [post] = await db.select().from(blogPosts).where(eq(blogPosts.id, id));
     if (!post) return undefined;
-    
+
     const [updatedPost] = await db
       .update(blogPosts)
       .set({ viewCount: post.viewCount + 1 })
       .where(eq(blogPosts.id, id))
       .returning();
-    
+
     return updatedPost;
   }
 
@@ -2469,7 +2519,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get user roles and check permissions
       const userRolesWithPermissions = await this.getUserRoles(userId);
-      
+
       // Check if any role has the required permission
       return userRolesWithPermissions.some(role => 
         Array.isArray(role.permissions) && role.permissions.includes(permission)
