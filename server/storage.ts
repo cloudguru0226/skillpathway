@@ -1596,19 +1596,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    return user;
-  }
 
-  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
-    const [updatedUser] = await db
-      .update(users)
-      .set(userData)
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
-  }
 
   // Roadmap methods
   async getRoadmap(id: number): Promise<Roadmap | undefined> {
