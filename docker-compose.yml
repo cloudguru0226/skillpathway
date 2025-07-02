@@ -7,7 +7,7 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/lms
+      - DATABASE_URL=postgresql://skilluser:skillpass@db:5432/skilldb
       - SESSION_SECRET=your-session-secret-key
     depends_on:
       - db
