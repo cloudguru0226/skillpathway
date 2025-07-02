@@ -3,7 +3,7 @@ import { Strategy as LocalStrategy } from 'passport-local';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import { db } from './db.js';
-import { comparePasswords } from './utils.js';
+import { comparePasswords } from './utils';
 
 const pgSession = connectPgSimple(session);
 
