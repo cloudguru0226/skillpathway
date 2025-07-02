@@ -1601,7 +1601,19 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-
+  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set(userData)
+        .where(eq(users.id, id))
+        .returning();
+      return updatedUser;
+    } catch (error) {
+      console.error("Error updating user:", error);
+      return undefined;
+    }
+  }
 
   // Roadmap methods
   async getRoadmap(id: number): Promise<Roadmap | undefined> {
