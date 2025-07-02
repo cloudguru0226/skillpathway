@@ -57,6 +57,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       database: "connected"
     });
   });
+
+  // Test session endpoint to debug authentication
+  app.get("/api/test-session", (req, res) => {
+    const sessionInfo = {
+      sessionID: req.sessionID,
+      authenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, username: req.user.username, isAdmin: req.user.isAdmin } : null,
+      sessionData: req.session
+    };
+    res.json(sessionInfo);
+  });
   
   // Register enhanced learner and admin features
   registerEnhancedFeatures(app);
