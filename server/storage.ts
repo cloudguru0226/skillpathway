@@ -39,6 +39,7 @@ import session from "express-session";
 import { db, pool } from "./db";
 import { eq, and, desc, isNull, sql, not, gte, lt, asc, inArray, like, gt, lte, or, count, ilike } from "drizzle-orm";
 import * as schema from "@shared/schema";
+import { comparePasswords } from './utils';
 import connectPg from "connect-pg-simple";
 
 const PostgresSessionStore = connectPg(session);
