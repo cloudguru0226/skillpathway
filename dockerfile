@@ -9,7 +9,8 @@ COPY tailwind.config.ts ./
 COPY postcss.config.js ./
 COPY drizzle.config.ts ./
 
-RUN npm install
+# Install ALL dependencies (not just production)
+RUN npm ci
 
 COPY . .
 
