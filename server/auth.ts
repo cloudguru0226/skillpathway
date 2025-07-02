@@ -7,7 +7,7 @@ import { comparePasswords } from './utils.js';
 
 const pgSession = connectPgSimple(session);
 
-// LocalStrategy for login
+// Setup local strategy
 passport.use(new LocalStrategy(
   async (username, password, done) => {
     try {
@@ -47,30 +47,48 @@ export function setupAuth(app, pgPool) {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,          // ✅ Make sure cookies are set over HTTP (local/dev)
+      secure: false,  // ✅ Use HTTPS + secure: true in production
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 1 week
+      maxAge: 7 * 24 * 60 * 60 * 1000  // 1 week
     }
   }));
 
   app.use(passport.initialize());
   app.use(passport.session());
 
-  app.post('/api/login', passport.authenticate('local'), (req, res) => {
-    console.log('✅ Login success', req.user);  // TEMP DEBUG
-    res.json({
-      id: req.user.id,
-      username: req.user.username,
-      email: req.user.email,
-      is_admin: req.user.is_admin
-    });
+  app.post('/api/login', (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+      if (err) return next(err);
+      if (!user) {
+        return res.status(401).json({ message: info?.message || 'Login failed' });
+      }
+
+      req.logIn(user, (err) => {
+        if (err) return next(err);
+
+        // Ensure session is saved before responding
+        req.session.save((err) => {
+          if (err) return next(err);
+          console.log('✅ Session saved for user:', user.username);
+
+          res.json({
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            is_admin: user.is_admin
+          });
+        });
+      });
+    })(req, res, next);
   });
 
   app.post('/api/logout', (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
-      res.json({ message: 'Logged out successfully' });
+      req.session.destroy(() => {
+        res.json({ message: 'Logged out successfully' });
+      });
     });
   });
 }
