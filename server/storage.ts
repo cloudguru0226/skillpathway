@@ -18,13 +18,16 @@ import {
   discussionTopics, type DiscussionTopic, type InsertDiscussionTopic,
   discussionReplies, type DiscussionReply, type InsertDiscussionReply,
   blogPosts, type BlogPost, type InsertBlogPost,
+  // New RBAC schemas
   roles, type Role, type InsertRole,
   userRoles, type UserRole, type InsertUserRole,
+  // Terraform Lab Integration schemas
   labEnvironments, type LabEnvironment, type InsertLabEnvironment,
   labInstances, type LabInstance, type InsertLabInstance,
   labTasks, type LabTask, type InsertLabTask,
   userLabTaskProgress, type UserLabTaskProgress, type InsertUserLabTaskProgress,
   labResources, type LabResource, type InsertLabResource,
+  // LMS Enhancement schemas
   courses, type Course, type InsertCourse,
   courseModules, type CourseModule, type InsertCourseModule,
   courseContentItems, type CourseContentItem, type InsertCourseContentItem,
@@ -35,11 +38,8 @@ import {
 import session from "express-session";
 import { db, pool } from "./db";
 import { eq, and, desc, isNull, sql, not, gte, lt, asc, inArray, like, gt, lte, or, count, ilike } from "drizzle-orm";
-import { comparePasswords } from './util';       // if util.ts
-import { comparePasswords } from './utils/index'; // if utils/index.ts
-import { comparePasswords } from '../utils';      // if in parent dir
+import * as schema from "@shared/schema";
 import connectPg from "connect-pg-simple";
-
 
 const PostgresSessionStore = connectPg(session);
 
@@ -2534,7 +2534,6 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
-
 
   async deleteUser(id: number): Promise<boolean> {
     try {
