@@ -7,16 +7,14 @@ import { comparePasswords } from './utils.js';
 
 const pgSession = connectPgSimple(session);
 
-// Setup local strategy
+// LocalStrategy for login
 passport.use(new LocalStrategy(
   async (username, password, done) => {
     try {
       const user = await db.getUserByUsername(username);
       if (!user) return done(null, false, { message: 'Incorrect username.' });
-
       const isMatch = await comparePasswords(password, user.password);
       if (!isMatch) return done(null, false, { message: 'Incorrect password.' });
-
       return done(null, user);
     } catch (err) {
       return done(err);
@@ -47,10 +45,10 @@ export function setupAuth(app, pgPool) {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,  // ✅ Use HTTPS + secure: true in production
+      secure: false,  // allow HTTP
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000  // 1 week
+      maxAge: 7 * 24 * 60 * 60 * 1000
     }
   }));
 
@@ -60,18 +58,13 @@ export function setupAuth(app, pgPool) {
   app.post('/api/login', (req, res, next) => {
     passport.authenticate('local', (err, user, info) => {
       if (err) return next(err);
-      if (!user) {
-        return res.status(401).json({ message: info?.message || 'Login failed' });
-      }
-
+      if (!user) return res.status(401).json({ message: info.message || 'Login failed' });
+      
       req.logIn(user, (err) => {
         if (err) return next(err);
-
-        // Ensure session is saved before responding
-        req.session.save((err) => {
-          if (err) return next(err);
-          console.log('✅ Session saved for user:', user.username);
-
+        
+        // 🔑 Ensure the session is saved before sending response
+        req.session.save(() => {
           res.json({
             id: user.id,
             username: user.username,
@@ -86,9 +79,7 @@ export function setupAuth(app, pgPool) {
   app.post('/api/logout', (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
-      req.session.destroy(() => {
-        res.json({ message: 'Logged out successfully' });
-      });
+      res.json({ message: 'Logged out successfully' });
     });
   });
 }
