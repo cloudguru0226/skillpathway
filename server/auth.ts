@@ -2,23 +2,19 @@ import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
-import { db } from './db.js';  // adjust path if needed
-import { comparePasswords } from './utils.js'; // adjust path if needed
+import { db } from './db.js';
+import { comparePasswords } from './utils.js';
 
 const pgSession = connectPgSimple(session);
 
-// Local authentication strategy
+// LocalStrategy for login
 passport.use(new LocalStrategy(
   async (username, password, done) => {
     try {
       const user = await db.getUserByUsername(username);
-      if (!user) {
-        return done(null, false, { message: 'Incorrect username.' });
-      }
+      if (!user) return done(null, false, { message: 'Incorrect username.' });
       const isMatch = await comparePasswords(password, user.password);
-      if (!isMatch) {
-        return done(null, false, { message: 'Incorrect password.' });
-      }
+      if (!isMatch) return done(null, false, { message: 'Incorrect password.' });
       return done(null, user);
     } catch (err) {
       return done(err);
@@ -43,16 +39,16 @@ export function setupAuth(app, pgPool) {
   app.use(session({
     store: new pgSession({
       pool: pgPool,
-      tableName: 'session',
+      tableName: 'session'
     }),
     secret: process.env.SESSION_SECRET || 'defaultsecret',
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,  // ✅ Allow HTTP cookies on EC2 without HTTPS
+      secure: false,  // ✅ THIS IS THE FIX
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000  // 1 week
+      maxAge: 7 * 24 * 60 * 60 * 1000
     }
   }));
 
