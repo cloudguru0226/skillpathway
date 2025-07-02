@@ -2535,20 +2535,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // User management methods
-  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
-    try {
-      const [updated] = await db
-        .update(users)
-        .set(updates)
-        .where(eq(users.id, id))
-        .returning();
-      return updated;
-    } catch (error) {
-      console.error("Error updating user:", error);
-      return undefined;
-    }
-  }
 
   async deleteUser(id: number): Promise<boolean> {
     try {
