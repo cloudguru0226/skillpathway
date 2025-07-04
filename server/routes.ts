@@ -47,7 +47,7 @@ async function hashPassword(password: string) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
-  
+
   // Health check endpoint for Docker
   app.get("/api/health", (req, res) => {
     res.status(200).json({ 
@@ -68,7 +68,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     res.json(sessionInfo);
   });
-  
+
   // Register enhanced learner and admin features
   registerEnhancedFeatures(app);
 
@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const roles = await storage.getUserRoles(userId);
       const experience = await storage.getUserExperience(userId);
       const badges = await storage.getUserBadges(userId);
-      
+
       return res.status(200).json({
         user,
         progress,
@@ -142,27 +142,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/users", requireAdmin, async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      
+
       // Check if username or email already exists
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
-      
+
       const existingEmail = await storage.getUserByEmail(userData.email);
       if (existingEmail) {
         return res.status(400).json({ message: "Email already exists" });
       }
-      
+
       // Hash the password
       const hashedPassword = await hashPassword(userData.password);
-      
+
       // Create user
       const user = await storage.createUser({
         ...userData,
         password: hashedPassword
       });
-      
+
       return res.status(201).json(user);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -182,7 +182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = req.body;
-      
+
       // If password is being updated, hash it
       if (updates.password) {
         updates.password = await hashPassword(updates.password);
@@ -228,12 +228,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/content", requireAdmin, async (req, res) => {
     try {
       const { search, status, type } = req.query;
-      
+
       // Get all content types
       const roadmaps = await storage.getRoadmaps();
       const courses = await storage.getCourses();
       const labEnvironments = await storage.getLabEnvironments();
-      
+
       // Format as content items with unique IDs per type
       const contentItems = [
         ...roadmaps.map(r => ({
@@ -288,18 +288,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply filters
       let filteredItems = contentItems;
-      
+
       if (search) {
         filteredItems = filteredItems.filter(item => 
           item.title.toLowerCase().includes((search as string).toLowerCase()) ||
           item.description.toLowerCase().includes((search as string).toLowerCase())
         );
       }
-      
+
       if (type && type !== "all") {
         filteredItems = filteredItems.filter(item => item.type === type);
       }
-      
+
       return res.status(200).json(filteredItems);
     } catch (error) {
       console.error("Error fetching admin content:", error);
@@ -307,59 +307,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new content (admin only)
+  // Create content (admin only)
   app.post("/api/admin/content", requireAdmin, async (req, res) => {
     try {
-      const { type, ...contentData } = req.body;
-      
-      let newContent;
-      
+      const { type, title, description, difficulty, status, duration, estimatedTime, tags, categories } = req.body;
+      const creatorId = req.user!.id;
+
+      let content;
       switch (type) {
-        case "roadmap":
-          const roadmapData = insertRoadmapSchema.parse(contentData);
-          newContent = await storage.createRoadmap(roadmapData);
-          break;
-        case "course":
-          newContent = await storage.createCourse({
-            title: contentData.title,
-            description: contentData.description,
+        case 'course':
+          content = await storage.createCourse({
+            title,
+            description,
+            difficulty: difficulty || 'beginner',
+            status: status || 'draft',
+            duration: duration || 1,
+            creatorId,
+            tags: tags || [],
             objectives: [],
-            prerequisites: [],
-            coverImageUrl: null,
-            duration: contentData.duration || 60,
-            difficulty: contentData.difficulty || "beginner",
-            status: "published",
-            enrollmentType: "open",
-            price: 0,
-            creatorId: 1,
-            tags: []
+            prerequisites: []
           });
           break;
-        case "lab":
-          newContent = await storage.createLabEnvironment({
-            name: contentData.title,
-            description: contentData.description,
-            difficulty: contentData.difficulty || "beginner",
-            estimatedTime: contentData.duration || 60,
-            terraformConfigUrl: "https://github.com/example/terraform-config",
-            terraformVersion: "1.0.0",
-            providerConfig: {},
+        case 'roadmap':
+          content = await storage.createRoadmap({
+            title,
+            description,
+            type: 'skill',
+            difficulty: difficulty || 'beginner',
+            estimatedTime: estimatedTime || '1-2 weeks',
+            content: { sections: [] }
+          });
+          break;
+        case 'lab':
+          content = await storage.createLabEnvironment({
+            name: title,
+            description,
+            terraformConfigUrl: 'https://github.com/example/terraform-config',
+            terraformVersion: '1.0.0',
+            providerConfig: { provider: 'aws' },
             variables: {},
-            tags: [],
-            isActive: true
+            tags: tags || [],
+            difficulty: difficulty || 'beginner',
+            estimatedTime: duration || 60,
+            isActive: status === 'published'
+          });
+          break;
+        case 'training':
+          content = await storage.createCourse({
+            title,
+            description,
+            difficulty: difficulty || 'beginner',
+            status: status || 'draft',
+            duration: duration || 1,
+            creatorId,
+            tags: tags || [],
+            objectives: [],
+            prerequisites: [],
+            enrollmentType: 'open'
           });
           break;
         default:
-          return res.status(400).json({ message: "Invalid content type" });
+          return res.status(400).json({ error: "Invalid content type" });
       }
-      
-      return res.status(201).json(newContent);
+
+      res.json(content);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid content data", errors: error.errors });
-      }
       console.error("Error creating content:", error);
-      return res.status(500).json({ message: "Failed to create content" });
+      res.status(500).json({ error: "Failed to create content" });
     }
   });
 
@@ -368,13 +382,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const contentId = parseInt(req.params.id);
       const { type, ...updates } = req.body;
-      
+
       if (isNaN(contentId)) {
         return res.status(400).json({ message: "Invalid content ID" });
       }
-      
+
       let updatedContent;
-      
+
       switch (type) {
         case "roadmap":
           updatedContent = await storage.updateRoadmap(contentId, updates);
@@ -388,11 +402,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         default:
           return res.status(400).json({ message: "Invalid content type" });
       }
-      
+
       if (!updatedContent) {
         return res.status(404).json({ message: "Content not found" });
       }
-      
+
       return res.status(200).json(updatedContent);
     } catch (error) {
       console.error("Error updating content:", error);
@@ -405,13 +419,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const contentId = parseInt(req.params.id);
       const { type } = req.query;
-      
+
       if (isNaN(contentId)) {
         return res.status(400).json({ message: "Invalid content ID" });
       }
-      
+
       let deleted;
-      
+
       switch (type) {
         case "roadmap":
           deleted = await storage.deleteRoadmap(contentId);
@@ -425,11 +439,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         default:
           return res.status(400).json({ message: "Invalid content type" });
       }
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Content not found" });
       }
-      
+
       return res.status(200).json({ message: "Content deleted successfully" });
     } catch (error) {
       console.error("Error deleting content:", error);
@@ -444,19 +458,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Invalid user ID" });
       }
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const userData = req.body;
-      
+
       // If password is provided, hash it
       if (userData.password) {
         userData.password = await hashPassword(userData.password);
       }
-      
+
       const updatedUser = await storage.updateUser(userId, userData);
       return res.status(200).json(updatedUser);
     } catch (error) {
@@ -470,29 +484,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.id);
       const roadmapId = parseInt(req.body.roadmapId);
-      
+
       if (isNaN(userId) || isNaN(roadmapId)) {
         return res.status(400).json({ message: "Invalid user ID or roadmap ID" });
       }
-      
+
       // Check if user exists
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Check if roadmap exists
       const roadmap = await storage.getRoadmap(roadmapId);
       if (!roadmap) {
         return res.status(404).json({ message: "Roadmap not found" });
       }
-      
+
       // Check if user already has this roadmap
       const existingProgress = await storage.getUserProgress(userId, roadmapId);
       if (existingProgress.length > 0) {
         return res.status(409).json({ message: "User already has this roadmap assigned" });
       }
-      
+
       // Create initial progress entry
       const progress = await storage.createUserProgress({
         userId,
@@ -508,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }))
         }
       });
-      
+
       // Log activity
       await storage.createActivityLog({
         userId,
@@ -518,7 +532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date(),
         duration: 0
       });
-      
+
       return res.status(201).json({ message: "Roadmap assigned successfully", progress });
     } catch (error) {
       console.error("Error assigning roadmap:", error);
@@ -531,22 +545,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const users = await storage.getUsers();
       const roadmaps = await storage.getRoadmaps();
-      
+
       const report = await Promise.all(
         users.map(async (user) => {
           const progress = await storage.getUserProgress(user.id);
-          
+
           // Calculate completion percentages for each roadmap
           const roadmapProgress = progress.map((p) => {
             const roadmap = roadmaps.find(r => r.id === p.roadmapId);
             if (!roadmap) return null;
-            
+
             const progressData = p.progress;
-            
+
             // Count total and completed nodes
             let totalNodes = 0;
             let completedNodes = 0;
-            
+
             if (progressData.sections) {
               progressData.sections.forEach((section: any) => {
                 if (section.nodes) {
@@ -555,11 +569,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               });
             }
-            
+
             const completionPercentage = totalNodes > 0 
               ? Math.round((completedNodes / totalNodes) * 100) 
               : 0;
-              
+
             return {
               roadmapId: p.roadmapId,
               roadmapTitle: roadmap.title,
@@ -569,7 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               lastAccessedAt: p.lastAccessedAt
             };
           }).filter(Boolean);
-          
+
           return {
             userId: user.id,
             username: user.username,
@@ -578,7 +592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       return res.status(200).json(report);
     } catch (error) {
       console.error("Error generating user progress report:", error);
@@ -590,10 +604,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/reports/learning-velocity", requireAdmin, async (req, res) => {
     try {
       const days = req.query.days ? parseInt(req.query.days as string) : 30;
-      
+
       // Get user progress data
       const velocityData = await storage.getLearningVelocity();
-      
+
       return res.status(200).json(velocityData);
     } catch (error) {
       console.error("Error generating learning velocity report:", error);
@@ -618,15 +632,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const roadmaps = await storage.getRoadmaps();
       if (roadmaps.length === 0) {
         const { sampleRoadmaps } = req.body;
-        
+
         if (!Array.isArray(sampleRoadmaps)) {
           return res.status(400).json({ message: "Invalid roadmap data" });
         }
-        
+
         for (const roadmap of sampleRoadmaps) {
           await storage.createRoadmap(roadmap);
         }
-        
+
         return res.status(201).json({ message: "Roadmaps seeded successfully" });
       } else {
         return res.status(200).json({ message: "Roadmaps already exist, no seeding needed" });
@@ -691,11 +705,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const roadmapData = req.body;
       const updatedRoadmap = await storage.updateRoadmap(id, roadmapData);
-      
+
       if (!updatedRoadmap) {
         return res.status(404).json({ message: "Roadmap not found" });
       }
-      
+
       return res.json(updatedRoadmap);
     } catch (error) {
       return res.status(500).json({ message: "Failed to update roadmap" });
@@ -815,7 +829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if progress already exists
       const existingProgress = await storage.getUserProgress(req.user.id, progressData.roadmapId);
-      
+
       if (existingProgress.length > 0) {
         // Update existing progress
         const updatedProgress = await storage.updateUserProgress(
@@ -827,7 +841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Create new progress entry
         const progress = await storage.createUserProgress(progressData);
-        
+
         // Broadcast progress update for new progress entries
         if (app.locals.broadcastProgressUpdate) {
           app.locals.broadcastProgressUpdate(req.user.id, {
@@ -837,7 +851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             progressRecord: progress
           });
         }
-        
+
         return res.status(201).json(progress);
       }
     } catch (error) {
@@ -895,7 +909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/roadmaps/:roadmapId/nodes/:nodeId/comments", async (req, res) => {
     const roadmapId = parseInt(req.params.roadmapId);
     const nodeId = req.params.nodeId;
-    
+
     if (isNaN(roadmapId)) {
       return res.status(400).json({ message: "Invalid roadmap ID" });
     }
@@ -912,7 +926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new comment
   app.post("/api/comments", async (req, res) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Unauthorized" });
+      returnres.status(401).json({ message: "Unauthorized" });
     }
 
     try {
@@ -1073,7 +1087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const reaction = req.params.reaction;
     const success = await storage.removeCommentReaction(req.user.id, commentId, reaction);
-    
+
     if (!success) {
       return res.status(404).json({ message: "Reaction not found" });
     }
@@ -1105,7 +1119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/roadmaps/:roadmapId/nodes/:nodeId/discussions", async (req, res) => {
     const roadmapId = parseInt(req.params.roadmapId);
     const nodeId = req.params.nodeId;
-    
+
     if (isNaN(roadmapId)) {
       return res.status(400).json({ message: "Invalid roadmap ID" });
     }
@@ -1164,7 +1178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Increment view count
       await storage.incrementTopicViewCount(id);
-      
+
       return res.json(topic);
     } catch (error) {
       console.error("Error fetching discussion topic:", error);
@@ -1387,7 +1401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/roadmaps/:roadmapId/nodes/:nodeId/resources", async (req, res) => {
     const roadmapId = parseInt(req.params.roadmapId);
     const nodeId = req.params.nodeId;
-    
+
     if (isNaN(roadmapId)) {
       return res.status(400).json({ message: "Invalid roadmap ID" });
     }
@@ -1434,7 +1448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const nodeId = req.params.nodeId;
     const resourceId = req.body.resourceId;
     const order = req.body.order || 0;
-    
+
     if (isNaN(roadmapId) || isNaN(resourceId)) {
       return res.status(400).json({ message: "Invalid roadmap or resource ID" });
     }
@@ -1478,7 +1492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const roadmapId = parseInt(req.params.roadmapId);
     const nodeId = req.params.nodeId;
     const resourceId = parseInt(req.params.resourceId);
-    
+
     if (isNaN(roadmapId) || isNaN(resourceId)) {
       return res.status(400).json({ message: "Invalid roadmap or resource ID" });
     }
@@ -1549,7 +1563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to get roadmap popularity" });
     }
   });
-  
+
   // Get experience breakdown and progression metrics - requires admin authentication
   app.get("/api/admin/experience-progression", requireAdmin, async (req, res) => {
     try {

@@ -2647,6 +2647,134 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+
+  // Create content methods
+  async createCourse(courseData: any) {
+    try{
+      const [course] = await db.insert(courses).values(courseData).returning();
+      return course;
+    }catch(error){
+      console.error("Error creating course:", error);
+      throw error;
+    }
+  }
+
+  async createLabEnvironment(labData: any) {
+     try{
+      const [lab] = await db.insert(labEnvironments).values(labData).returning();
+      return lab;
+     }catch(error){
+       console.error("Error creating lab:", error);
+       throw error;
+     }
+  }
+
+  // Get all courses
+  async getCourses() {
+    try{
+      return await db.select().from(courses);
+    }catch(error){
+      console.error("Error getting courses:", error);
+      return [];
+    }
+  }
+
+  // Get all lab environments
+  async getLabEnvironments() {
+    try{
+      return await db.select().from(labEnvironments);
+    }catch(error){
+      console.error("Error getting lab environments:", error);
+      return [];
+    }
+  }
+
+  // Update content methods
+  async updateContent(id: number, updates: any) {
+    // This is a generic method - we need specific update methods
+    throw new Error("Use specific update methods for each content type");
+  }
+
+  async updateCourse(id: number, updates: any) {
+    try{
+      const [course] = await db.update(courses)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(courses.id, id))
+        .returning();
+      return course;
+    }catch(error){
+      console.error("Error updating course:", error);
+      return undefined;
+    }
+  }
+
+  async updateLabEnvironment(id: number, updates: any) {
+    try{
+      const [lab] = await db.update(labEnvironments)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(labEnvironments.id, id))
+        .returning();
+      return lab;
+    }catch(error){
+      console.error("Error updating lab:", error);
+      return undefined;
+    }
+  }
+
+  async updateRoadmap(id: number, updates: any) {
+    try{
+      const [roadmap] = await db.update(roadmaps)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(roadmaps.id, id))
+        .returning();
+      return roadmap;
+    }catch(error){
+      console.error("Error updating roadmap:", error);
+      return undefined;
+    }
+  }
+
+  // Delete content methods
+  async deleteContent(id: number) {
+    // This is a generic method - we need specific delete methods
+    throw new Error("Use specific delete methods for each content type");
+  }
+
+  async deleteCourse(id: number) {
+    try{
+      const deleted = await db.delete(courses)
+        .where(eq(courses.id, id))
+        .returning();
+      return deleted.length > 0;
+    }catch(error){
+      console.error("Error deleting course:", error);
+      return false;
+    }
+  }
+
+  async deleteLabEnvironment(id: number) {
+    try{
+      const deleted = await db.delete(labEnvironments)
+        .where(eq(labEnvironments.id, id))
+        .returning();
+      return deleted.length > 0;
+    }catch(error){
+      console.error("Error deleting lab:", error);
+      return false;
+    }
+  }
+
+  async deleteRoadmap(id: number) {
+    try{
+      const deleted = await db.delete(roadmaps)
+        .where(eq(roadmaps.id, id))
+        .returning();
+      return deleted.length > 0;
+    }catch(error){
+      console.error("Error deleting roadmap:", error);
+      return false
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
