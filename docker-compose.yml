@@ -12,6 +12,7 @@ services:
     depends_on:
       - db
     restart: unless-stopped
+    command: sh -c "npx drizzle-kit push && npm run start"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
       interval: 30s
