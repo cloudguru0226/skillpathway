@@ -1,0 +1,49 @@
+[+] Building 19.2s (10/10) FINISHED                                                                                                                     docker:default
+ => [internal] load build definition from Dockerfile                                                                                                              0.0s
+ => => transferring dockerfile: 1.02kB                                                                                                                            0.0s
+ => [internal] load metadata for docker.io/library/node:20-alpine                                                                                                 0.8s
+ => [internal] load .dockerignore                                                                                                                                 0.0s
+ => => transferring context: 298B                                                                                                                                 0.0s
+ => [1/6] FROM docker.io/library/node:20-alpine@sha256:fa316946c0cb1f041fe46dda150f3085b71168555e5706ec0c7466a5bae12244                                           4.2s
+ => => resolve docker.io/library/node:20-alpine@sha256:fa316946c0cb1f041fe46dda150f3085b71168555e5706ec0c7466a5bae12244                                           0.0s
+ => => sha256:fa316946c0cb1f041fe46dda150f3085b71168555e5706ec0c7466a5bae12244 7.67kB / 7.67kB                                                                    0.0s
+ => => sha256:9d015b82e81e8107ef0d341a8ef2d6ca4a6bc6f3b6659bd5869316eef3779761 1.72kB / 1.72kB                                                                    0.0s
+ => => sha256:da9722576d07f63c233c15985fb5109ec5ab65eb5cede4bb7fcd4e212d194613 6.42kB / 6.42kB                                                                    0.0s
+ => => sha256:0c54b794b00440f2499cd0df810d1b53ecb69afe190c885956e1e8ff92fec01d 42.99MB / 42.99MB                                                                  0.5s
+ => => sha256:a54eeddfc49c9ef8588e38ee29e59a0e7ad1c5967d3d001f253aed0cb11d56a4 1.26MB / 1.26MB                                                                    0.3s
+ => => sha256:b7f182da327e7013ff937fdf2ce36f3deb5e723dcfccc5fdbdbc708fe03a7698 446B / 446B                                                                        0.3s
+ => => extracting sha256:0c54b794b00440f2499cd0df810d1b53ecb69afe190c885956e1e8ff92fec01d                                                                         3.4s
+ => => extracting sha256:a54eeddfc49c9ef8588e38ee29e59a0e7ad1c5967d3d001f253aed0cb11d56a4                                                                         0.1s
+ => => extracting sha256:b7f182da327e7013ff937fdf2ce36f3deb5e723dcfccc5fdbdbc708fe03a7698                                                                         0.0s
+ => [internal] load build context                                                                                                                                 0.1s
+ => => transferring context: 2.82MB                                                                                                                               0.1s
+ => [2/6] WORKDIR /app                                                                                                                                            0.4s
+ => [3/6] COPY package*.json ./                                                                                                                                   0.0s
+ => [4/6] RUN npm ci --only=production                                                                                                                           12.8s
+ => [5/6] COPY . .                                                                                                                                                0.1s 
+ => ERROR [6/6] RUN npm run build                                                                                                                                 0.8s 
+------                                                                                                                                                                 
+ > [6/6] RUN npm run build:                                                                                                                                            
+0.454 
+0.454 > rest-express@1.0.0 build
+0.454 > vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+0.454 
+0.743 failed to load config from /app/vite.config.ts
+0.745 error during build:
+0.745 Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@vitejs/plugin-react' imported from /app/vite.config.ts.timestamp-1752134778788-8f21ec2a25903.mjs
+0.745     at packageResolve (node:internal/modules/esm/resolve:873:9)
+0.745     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+0.745     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+0.745     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:642:12)
+0.745     at #cachedDefaultResolve (node:internal/modules/esm/loader:591:25)
+0.745     at ModuleLoader.resolve (node:internal/modules/esm/loader:574:38)
+0.745     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:236:38)
+0.745     at ModuleJob._link (node:internal/modules/esm/module_job:130:49)
+------
+Dockerfile:17
+--------------------
+  15 |     
+  16 |     # Build the application
+  17 | >>> RUN npm run build
+  18 |     
+  19 |     # Expose port

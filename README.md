@@ -51,16 +51,16 @@ The application will be available at `http://localhost:5000`
 
 1. **Quick deployment with Docker Compose**
 ```bash
+# Clean deployment (recommended for first time)
+docker-compose down
+docker system prune -f
+docker-compose build --no-cache
 docker-compose up -d
 ```
 
-2. **Manual build and test (optional)**
+2. **Simple deployment (if no cache issues)**
 ```bash
-# Test the build process
-./scripts/test-docker-build.sh
-
-# Or build manually
-docker build -t lms-app:latest .
+docker-compose up -d
 ```
 
 This will start:
