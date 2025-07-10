@@ -1,0 +1,23 @@
+ => CACHED [app 3/6] COPY package*.json ./                                                                                                                        0.0s
+ => CACHED [app 4/6] RUN npm ci --only=production                                                                                                                 0.0s
+ => [app 5/6] COPY . .                                                                                                                                            0.3s
+ => ERROR [app 6/6] RUN npm run build                                                                                                                             0.8s
+------                                                                                                                                                                 
+ > [app 6/6] RUN npm run build:                                                                                                                                        
+0.464                                                                                                                                                                  
+0.464 > rest-express@1.0.0 build
+0.464 > vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+0.464 
+0.763 failed to load config from /app/vite.config.ts
+0.764 error during build:
+0.764 Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@vitejs/plugin-react' imported from /app/vite.config.ts.timestamp-1752134644859-cffd67813b642.mjs
+0.764     at packageResolve (node:internal/modules/esm/resolve:873:9)
+0.764     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+0.764     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+0.764     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:642:12)
+0.764     at #cachedDefaultResolve (node:internal/modules/esm/loader:591:25)
+0.764     at ModuleLoader.resolve (node:internal/modules/esm/loader:574:38)
+0.764     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:236:38)
+0.764     at ModuleJob._link (node:internal/modules/esm/module_job:130:49)
+------
+failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
