@@ -49,14 +49,25 @@ The application will be available at `http://localhost:5000`
 
 ### Docker Deployment
 
-1. **Build and run with Docker Compose**
+1. **Quick deployment with Docker Compose**
 ```bash
 docker-compose up -d
+```
+
+2. **Manual build and test (optional)**
+```bash
+# Test the build process
+./scripts/test-docker-build.sh
+
+# Or build manually
+docker build -t lms-app:latest .
 ```
 
 This will start:
 - PostgreSQL database on port 5432
 - LMS application on port 5000
+
+**Note**: The first build may take 3-5 minutes as it installs all dependencies and builds the application.
 
 ### Environment Variables
 
