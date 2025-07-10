@@ -40,6 +40,7 @@ app.use((req, res, next) => {
   // Import seed functions
   const { createAdminUserIfNotExists } = await import('./admin-seed');
   const { seedDemoData } = await import('./seed-demo-data');
+  const { seedComprehensiveData } = await import('./seed-comprehensive-data');
   
   const server = await registerRoutes(app);
   
@@ -47,11 +48,11 @@ app.use((req, res, next) => {
   await createAdminUserIfNotExists();
   console.log('Admin user setup completed. Use username: admin, password: admin123');
   
-  // Seed demo data
+  // Seed comprehensive data including roadmaps, courses, and labs
   try {
-    await seedDemoData();
+    await seedComprehensiveData();
   } catch (error) {
-    console.error('Error seeding demo data:', error);
+    console.error('Error seeding comprehensive data:', error);
   }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
