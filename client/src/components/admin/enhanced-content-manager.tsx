@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import RoadmapContentEditor from "./roadmap-content-editor";
 
 interface ContentResource {
   id: number;
@@ -77,6 +78,7 @@ export default function EnhancedContentManager() {
   const [selectedNode, setSelectedNode] = useState<string>("all");
   const [isCreateResourceDialogOpen, setIsCreateResourceDialogOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<ContentResource | null>(null);
+  const [showRoadmapEditor, setShowRoadmapEditor] = useState<number | null>(null);
   const [newResource, setNewResource] = useState({
     title: "",
     description: "",
@@ -240,6 +242,33 @@ export default function EnhancedContentManager() {
 
   const selectedRoadmap = roadmaps?.find((r: Roadmap) => r.id === selectedRoadmapId);
 
+  // If showing roadmap editor, render that instead
+  if (showRoadmapEditor) {
+    const selectedRoadmapForEditor = roadmaps?.find((r: Roadmap) => r.id === showRoadmapEditor);
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowRoadmapEditor(null)}
+            className="flex items-center space-x-2"
+          >
+            <X className="h-4 w-4" />
+            <span>Back to Content Manager</span>
+          </Button>
+          <h2 className="text-xl font-semibold">Editing: {selectedRoadmapForEditor?.title}</h2>
+        </div>
+        <RoadmapContentEditor
+          roadmapId={showRoadmapEditor}
+          roadmapData={selectedRoadmapForEditor}
+          onUpdate={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/roadmaps"] });
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -296,13 +325,17 @@ export default function EnhancedContentManager() {
                 <div className="flex items-end">
                   <Button
                     onClick={() => {
-                      // Open full content editor
-                      window.open(`/admin/content-editor${selectedRoadmapId ? `?id=${selectedRoadmapId}` : ''}`, '_blank');
+                      if (selectedRoadmapId) {
+                        setShowRoadmapEditor(selectedRoadmapId);
+                      } else {
+                        // Open full content editor for new content
+                        window.open(`/admin/content-editor`, '_blank');
+                      }
                     }}
                     className="w-full"
                   >
                     <Edit className="h-4 w-4 mr-2" />
-                    Open Full Editor
+                    {selectedRoadmapId ? 'Edit Roadmap Content' : 'Open Full Editor'}
                   </Button>
                 </div>
               </div>

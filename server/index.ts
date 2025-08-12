@@ -52,6 +52,10 @@ app.use((req, res, next) => {
   const { registerContentSectionRoutes } = await import('./routes/content-sections');
   registerContentSectionRoutes(app);
   
+  // Register roadmap materials routes
+  const { registerRoadmapMaterialRoutes } = await import('./routes/roadmap-materials');
+  registerRoadmapMaterialRoutes(app);
+  
   // Create admin user for demonstration
   await createAdminUserIfNotExists();
   console.log('Admin user setup completed. Use username: admin, password: admin123');
