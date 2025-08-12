@@ -9,7 +9,7 @@ import ReportsSection from "@/components/admin/reports-section";
 import AdminStats from "@/components/admin/admin-stats";
 import ContentManagement from "@/components/admin/content-management";
 import EnhancedUserManager from "@/components/admin/enhanced-user-manager";
-import EnhancedContentManager from "@/components/admin/enhanced-content-manager";
+import UnifiedContentManager from "@/components/admin/unified-content-manager";
 
 export default function AdminPage() {
   const { user, isLoading } = useAuth();
@@ -49,30 +49,22 @@ export default function AdminPage() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-6 w-full gap-1">
+        <TabsList className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-5 w-full gap-1">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart2 className="h-4 w-4" />
             <span className="hidden md:inline">Overview</span>
           </TabsTrigger>
-          <TabsTrigger value="enhanced-users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            <span className="hidden md:inline">Users</span>
-          </TabsTrigger>
-          <TabsTrigger value="enhanced-content" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            <span className="hidden md:inline">Content</span>
-          </TabsTrigger>
           <TabsTrigger value="content" className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4" />
+            <FileText className="h-4 w-4" />
             <span className="hidden md:inline">Content</span>
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             <span className="hidden md:inline">Users</span>
           </TabsTrigger>
-          <TabsTrigger value="roadmaps" className="flex items-center gap-2">
+          <TabsTrigger value="assignments" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
-            <span className="hidden md:inline">Assign</span>
+            <span className="hidden md:inline">Assignments</span>
           </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -85,27 +77,19 @@ export default function AdminPage() {
         </TabsContent>
         
         <TabsContent value="content" className="space-y-6">
-          <ContentManagement />
+          <UnifiedContentManager />
         </TabsContent>
         
         <TabsContent value="users" className="space-y-6">
-          <UserManagement />
+          <EnhancedUserManager />
         </TabsContent>
         
-        <TabsContent value="roadmaps" className="space-y-6">
+        <TabsContent value="assignments" className="space-y-6">
           <AssignRoadmaps />
         </TabsContent>
         
         <TabsContent value="reports" className="space-y-6">
           <ReportsSection />
-        </TabsContent>
-        
-        <TabsContent value="enhanced-users" className="space-y-6">
-          <EnhancedUserManager />
-        </TabsContent>
-        
-        <TabsContent value="enhanced-content" className="space-y-6">
-          <EnhancedContentManager />
         </TabsContent>
       </Tabs>
     </div>
