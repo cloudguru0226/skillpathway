@@ -629,22 +629,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Special endpoint for seeding roadmaps (for development purposes)
   app.post("/api/seed-roadmaps", async (req, res) => {
     try {
-      const roadmaps = await storage.getRoadmaps();
-      if (roadmaps.length === 0) {
-        const { sampleRoadmaps } = req.body;
-
-        if (!Array.isArray(sampleRoadmaps)) {
-          return res.status(400).json({ message: "Invalid roadmap data" });
-        }
-
-        for (const roadmap of sampleRoadmaps) {
-          await storage.createRoadmap(roadmap);
-        }
-
-        return res.status(201).json({ message: "Roadmaps seeded successfully" });
-      } else {
-        return res.status(200).json({ message: "Roadmaps already exist, no seeding needed" });
-      }
+      const { seedAllRoadmaps } = await import("./seed-all-roadmaps");
+      const result = await seedAllRoadmaps();
+      return res.status(200).json(result);
     } catch (error) {
       console.error("Error seeding roadmaps:", error);
       return res.status(500).json({ message: "Failed to seed roadmaps" });
