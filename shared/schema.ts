@@ -255,7 +255,7 @@ export const comments = pgTable("comments", {
   userId: integer("user_id").notNull().references(() => users.id),
   roadmapId: integer("roadmap_id").references(() => roadmaps.id),
   nodeId: text("node_id"),
-  parentId: integer("parent_id").references(() => comments.id),
+  parentId: integer("parent_id"),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -933,7 +933,7 @@ export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull().unique(),
   description: text("description"),
-  parentId: integer("parent_id").references(() => categories.id),
+  parentId: integer("parent_id"),
   iconName: varchar("icon_name", { length: 50 }), // Lucide icon name
   color: varchar("color", { length: 7 }), // hex color code
   isActive: boolean("is_active").default(true).notNull(),

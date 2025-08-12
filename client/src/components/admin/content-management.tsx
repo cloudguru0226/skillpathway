@@ -28,13 +28,16 @@ import {
   Eye,
   EyeOff,
   Upload,
-  Download
+  Download,
+  Settings
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { queryClient } from "@/lib/queryClient";
+import RoadmapContentEditor from "./roadmap-content-editor";
 
 interface ContentItem {
-  id: number;
+  id: string;
+  contentId: number;
   title: string;
   description: string;
   type: "course" | "roadmap" | "lab" | "training";
@@ -47,19 +50,6 @@ interface ContentItem {
   creatorId: number;
   enrollmentCount?: number;
   completionRate?: number;
-}
-
-interface ContentItem {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  difficulty: string;
-  status: string;
-  tags: string[];
-  categories: string[];
-  enrollments?: number;
-  updatedAt?: string;
 }
 
 interface ContentFormData {
@@ -84,6 +74,9 @@ export default function ContentManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContentItem | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isRoadmapEditorOpen, setIsRoadmapEditorOpen] = useState(false);
+  const [editingRoadmap, setEditingRoadmap] = useState<{ id: number; title: string; content: any } | null>(null);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
   // Form state for creating/editing content
   const [formData, setFormData] = useState<ContentFormData>({
@@ -102,26 +95,14 @@ export default function ContentManagement() {
   const { data: contentItems, isLoading } = useQuery({
     queryKey: ["/api/admin/content", { search: searchQuery, status: statusFilter, type: typeFilter }],
     queryFn: async () => {
-      try {
-        const params = new URLSearchParams();
-        if (searchQuery) params.set("search", searchQuery);
-        if (statusFilter !== "all") params.set("status", statusFilter);
-        if (typeFilter !== "all") params.set("type", typeFilter);
+      const params = new URLSearchParams();
+      if (searchQuery) params.set("search", searchQuery);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (typeFilter !== "all") params.set("type", typeFilter);
 
-        const res = await fetch(`/api/admin/content?${params.toString()}`);
-        if (!res.ok) throw new Error("Failed to fetch content");
-        return await res.json();
-      } catch (error) {
-        // Mock data for demo
-        return mockContentItems.filter(item => {
-          const matchesSearch = !searchQuery || 
-            item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.description.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-          const matchesType = typeFilter === "all" || item.type === typeFilter;
-          return matchesSearch && matchesStatus && matchesType;
-        });
-      }
+      const res = await fetch(`/api/admin/content?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch content");
+      return await res.json();
     }
   });
 
@@ -156,7 +137,7 @@ export default function ContentManagement() {
 
   // Update content mutation
   const updateContentMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<ContentFormData> }) => {
+    mutationFn: async ({ id, data }: { id: number; data: Partial<ContentFormData> & { type: string } }) => {
       const res = await fetch(`/api/admin/content/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -241,8 +222,6 @@ export default function ContentManagement() {
     }
   });
 
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-
   const resetForm = () => {
     setFormData({
       title: "",
@@ -291,7 +270,10 @@ export default function ContentManagement() {
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
-    updateContentMutation.mutate({ id: editingItem.id, data: formData });
+    updateContentMutation.mutate({ 
+      id: editingItem.contentId, 
+      data: { ...formData, type: editingItem.type } 
+    });
   };
 
   const handleDelete = (id: string, title: string) => {
@@ -303,6 +285,30 @@ export default function ContentManagement() {
   const handleBulkStatusUpdate = (status: string) => {
     if (selectedItems.length === 0) return;
     bulkUpdateMutation.mutate({ ids: selectedItems, updates: { status } });
+  };
+
+  const handleEditRoadmapContent = async (item: ContentItem) => {
+    if (item.type !== "roadmap") return;
+    
+    try {
+      // Fetch the full roadmap data including content
+      const res = await fetch(`/api/roadmaps/${item.contentId}`);
+      if (!res.ok) throw new Error("Failed to fetch roadmap details");
+      const roadmapData = await res.json();
+      
+      setEditingRoadmap({
+        id: item.contentId,
+        title: item.title,
+        content: roadmapData.content || { sections: [] }
+      });
+      setIsRoadmapEditorOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load roadmap content for editing.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -324,68 +330,9 @@ export default function ContentManagement() {
     }
   };
 
-  const mockContentItems: ContentItem[] = [
-    {
-      id: 1,
-      title: "React Fundamentals",
-      description: "Learn the basics of React development",
-      type: "course",
-      difficulty: "beginner",
-      status: "published",
-      tags: ["react", "javascript", "frontend"],
-      categories: ["Frontend Development"],
-      createdAt: "2024-05-01",
-      updatedAt: "2024-06-20",
-      creatorId: 1,
-      enrollmentCount: 1250,
-      completionRate: 78
-    },
-    {
-      id: 2,
-      title: "Frontend Developer Roadmap",
-      description: "Complete learning path for frontend development",
-      type: "roadmap",
-      difficulty: "intermediate",
-      status: "published",
-      tags: ["frontend", "html", "css", "javascript"],
-      categories: ["Frontend Development"],
-      createdAt: "2024-04-15",
-      updatedAt: "2024-06-18",
-      creatorId: 1,
-      enrollmentCount: 850,
-      completionRate: 65
-    },
-    {
-      id: 3,
-      title: "AWS EC2 Setup",
-      description: "Hands-on AWS EC2 configuration lab",
-      type: "lab",
-      difficulty: "intermediate",
-      status: "published",
-      tags: ["aws", "cloud", "ec2"],
-      categories: ["Cloud Computing"],
-      createdAt: "2024-05-10",
-      updatedAt: "2024-06-15",
-      creatorId: 1,
-      enrollmentCount: 420,
-      completionRate: 85
-    },
-    {
-      id: 4,
-      title: "TypeScript Advanced",
-      description: "Advanced TypeScript concepts and patterns",
-      type: "course",
-      difficulty: "advanced",
-      status: "draft",
-      tags: ["typescript", "javascript", "programming"],
-      categories: ["Programming Languages"],
-      createdAt: "2024-06-01",
-      updatedAt: "2024-06-20",
-      creatorId: 1
-    }
-  ];
 
-  const filteredItems = contentItems?.filter(item => {
+
+  const filteredItems = contentItems?.filter((item: ContentItem) => {
     if (activeTab !== "all" && item.type !== activeTab) return false;
     return true;
   }) || [];
@@ -601,10 +548,10 @@ export default function ContentManagement() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="all">All Content ({contentItems?.length || 0})</TabsTrigger>
-          <TabsTrigger value="course">Courses ({contentItems?.filter(item => item.type === "course").length || 0})</TabsTrigger>
-          <TabsTrigger value="roadmap">Roadmaps ({contentItems?.filter(item => item.type === "roadmap").length || 0})</TabsTrigger>
-          <TabsTrigger value="lab">Labs ({contentItems?.filter(item => item.type === "lab").length || 0})</TabsTrigger>
-          <TabsTrigger value="training">Trainings ({contentItems?.filter(item => item.type === "training").length || 0})</TabsTrigger>
+          <TabsTrigger value="course">Courses ({contentItems?.filter((item: ContentItem) => item.type === "course").length || 0})</TabsTrigger>
+          <TabsTrigger value="roadmap">Roadmaps ({contentItems?.filter((item: ContentItem) => item.type === "roadmap").length || 0})</TabsTrigger>
+          <TabsTrigger value="lab">Labs ({contentItems?.filter((item: ContentItem) => item.type === "lab").length || 0})</TabsTrigger>
+          <TabsTrigger value="training">Trainings ({contentItems?.filter((item: ContentItem) => item.type === "training").length || 0})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
@@ -660,7 +607,7 @@ export default function ContentManagement() {
                           <div className="font-medium">{item.title}</div>
                           <div className="text-sm text-muted-foreground">{item.description}</div>
                           <div className="flex gap-1">
-                            {item.tags.slice(0, 3).map(tag => (
+                            {item.tags.slice(0, 3).map((tag: string) => (
                               <Badge key={tag} variant="secondary" className="text-xs">
                                 {tag}
                               </Badge>
@@ -709,8 +656,14 @@ export default function ContentManagement() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => handleEdit(item)}>
                               <Edit className="h-4 w-4 mr-2" />
-                              Edit
+                              Edit Details
                             </DropdownMenuItem>
+                            {item.type === "roadmap" && (
+                              <DropdownMenuItem onClick={() => handleEditRoadmapContent(item)}>
+                                <Settings className="h-4 w-4 mr-2" />
+                                Edit Content
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem>
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicate
@@ -825,6 +778,20 @@ export default function ContentManagement() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Roadmap Content Editor */}
+      {editingRoadmap && (
+        <RoadmapContentEditor
+          isOpen={isRoadmapEditorOpen}
+          onClose={() => {
+            setIsRoadmapEditorOpen(false);
+            setEditingRoadmap(null);
+          }}
+          roadmapId={editingRoadmap.id}
+          roadmapTitle={editingRoadmap.title}
+          content={editingRoadmap.content}
+        />
+      )}
     </div>
   );
 }
