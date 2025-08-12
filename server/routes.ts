@@ -48,14 +48,35 @@ async function hashPassword(password: string) {
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
-  // Health check endpoint for Docker
-  app.get("/api/health", (req, res) => {
-    res.status(200).json({ 
-      status: "ok", 
+  // Enhanced health check endpoint for production monitoring
+  app.get("/api/health", async (req, res) => {
+    const healthCheck = {
+      status: "ok",
       timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      environment: process.env.NODE_ENV,
+      database: "ok",
       service: "Learning Management System",
-      database: "connected"
-    });
+      version: "1.0.0"
+    };
+
+    try {
+      // Test database connectivity with a simple query
+      const result = await storage.getPlatformStats();
+      if (result) {
+        healthCheck.database = "ok";
+      } else {
+        healthCheck.database = "warning";
+      }
+    } catch (error) {
+      console.error("Health check database error:", error);
+      healthCheck.database = "error";
+      healthCheck.status = "degraded";
+    }
+
+    const statusCode = healthCheck.status === "ok" ? 200 : 503;
+    res.status(statusCode).json(healthCheck);
   });
 
   // Test session endpoint to debug authentication
