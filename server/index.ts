@@ -48,6 +48,10 @@ app.use((req, res, next) => {
   const { default: enhancedRoutes } = await import('./routes-enhanced');
   app.use('/api', enhancedRoutes);
   
+  // Register content section management routes
+  const { registerContentSectionRoutes } = await import('./routes/content-sections');
+  registerContentSectionRoutes(app);
+  
   // Create admin user for demonstration
   await createAdminUserIfNotExists();
   console.log('Admin user setup completed. Use username: admin, password: admin123');

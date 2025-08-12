@@ -29,6 +29,7 @@ import CertificatesPage from "@/pages/courses/certificates-page";
 // Enhanced learner features
 import MyEnrollmentsPage from "@/pages/my-enrollments";
 import SearchPage from "@/pages/search-page";
+import ContentEditorPage from "@/pages/content-editor-page";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/test-roadmap" component={TestRoadmap} />
       <ProtectedRoute path="/roadmap/:id" component={RoadmapDetailPage} />
       <ProtectedRoute path="/admin" component={AdminPage} />
+      <ProtectedRoute path="/admin/content-editor" component={ContentEditorPage} />
       <ProtectedRoute path="/profile" component={UserProfile} />
       <ProtectedRoute path="/community" component={CommunityPage} />
       <ProtectedRoute path="/guides" component={GuidesPage} />

@@ -267,6 +267,48 @@ export default function EnhancedContentManager() {
         </TabsList>
 
         <TabsContent value="resources" className="space-y-4">
+          {/* Full Content Editor Button */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Advanced Content Editor</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Create comprehensive learning content with rich text, videos, quizzes, assignments, and interactive labs
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Select Content to Edit</Label>
+                  <Select value={selectedRoadmapId?.toString() || "all"} onValueChange={(value) => setSelectedRoadmapId(value === "all" ? null : parseInt(value))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose content to edit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Create New Content</SelectItem>
+                      {roadmaps?.map((roadmap: Roadmap) => (
+                        <SelectItem key={roadmap.id} value={roadmap.id.toString()}>
+                          Edit: {roadmap.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    onClick={() => {
+                      // Open full content editor
+                      window.open(`/admin/content-editor${selectedRoadmapId ? `?id=${selectedRoadmapId}` : ''}`, '_blank');
+                    }}
+                    className="w-full"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Open Full Editor
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Filters */}
           <Card>
             <CardHeader>
