@@ -2,14 +2,20 @@ import { pgTable, text, serial, integer, boolean, jsonb, timestamp, varchar, uni
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User schema
+// User schema with enhanced profile and permissions
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
   isAdmin: boolean("is_admin").default(false).notNull(),
+  role: text("role").default("learner").notNull(), // 'admin' or 'learner'
+  profile: jsonb("profile"), // Extended profile information
+  permissions: jsonb("permissions"), // Granular permissions
+  isActive: boolean("is_active").default(true).notNull(),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -17,6 +23,10 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   email: true,
   isAdmin: true,
+  role: true,
+  profile: true,
+  permissions: true,
+  isActive: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -67,6 +77,35 @@ export const insertUserProgressSchema = createInsertSchema(userProgress).pick({
 export type InsertUserProgress = z.infer<typeof insertUserProgressSchema>;
 export type UserProgress = typeof userProgress.$inferSelect;
 
+// User Assignments schema for admin-managed content assignments
+export const userAssignments = pgTable("user_assignments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  roadmapId: integer("roadmap_id").references(() => roadmaps.id),
+  courseId: integer("course_id").references(() => courses.id),
+  assignedBy: integer("assigned_by").notNull().references(() => users.id),
+  dueDate: timestamp("due_date"),
+  priority: text("priority").default("medium").notNull(), // 'low', 'medium', 'high'
+  status: text("status").default("assigned").notNull(), // 'assigned', 'in_progress', 'completed'
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"),
+});
+
+export const insertUserAssignmentSchema = createInsertSchema(userAssignments).pick({
+  userId: true,
+  roadmapId: true,
+  courseId: true,
+  assignedBy: true,
+  dueDate: true,
+  priority: true,
+  status: true,
+  notes: true,
+});
+
+export type InsertUserAssignment = z.infer<typeof insertUserAssignmentSchema>;
+export type UserAssignment = typeof userAssignments.$inferSelect;
+
 // Bookmarks schema
 export const bookmarks = pgTable("bookmarks", {
   id: serial("id").primaryKey(),
@@ -82,6 +121,41 @@ export const insertBookmarkSchema = createInsertSchema(bookmarks).pick({
 
 export type InsertBookmark = z.infer<typeof insertBookmarkSchema>;
 export type Bookmark = typeof bookmarks.$inferSelect;
+
+// Enhanced Resources schema for roadmap content attachments
+export const contentResources = pgTable("content_resources", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // 'link', 'video', 'document', 'image', 'presentation', 'code'
+  url: text("url"),
+  content: text("content"), // For text/code content
+  metadata: jsonb("metadata"), // Additional resource metadata
+  roadmapId: integer("roadmap_id").references(() => roadmaps.id),
+  sectionTitle: text("section_title"), // Which section this belongs to
+  nodeId: text("node_id"), // Which specific node this belongs to
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  isPublic: boolean("is_public").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertContentResourceSchema = createInsertSchema(contentResources).pick({
+  title: true,
+  description: true,
+  type: true,
+  url: true,
+  content: true,
+  metadata: true,
+  roadmapId: true,
+  sectionTitle: true,
+  nodeId: true,
+  createdBy: true,
+  isPublic: true,
+});
+
+export type InsertContentResource = z.infer<typeof insertContentResourceSchema>;
+export type ContentResource = typeof contentResources.$inferSelect;
 
 // Activity Log schema
 export const activityLogs = pgTable("activity_logs", {
@@ -883,8 +957,8 @@ export const insertAssignmentSchema = createInsertSchema(assignments).pick({
 export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
 export type Assignment = typeof assignments.$inferSelect;
 
-// User assignments schema (tracks individual user assignments)
-export const userAssignments = pgTable("user_assignments", {
+// User assignment submissions schema (tracks individual user assignment submissions)
+export const userAssignmentSubmissions = pgTable("user_assignment_submissions", {
   id: serial("id").primaryKey(),
   assignmentId: integer("assignment_id").notNull().references(() => assignments.id),
   userId: integer("user_id").notNull().references(() => users.id),
@@ -906,7 +980,7 @@ export const userAssignments = pgTable("user_assignments", {
   }
 });
 
-export const insertUserAssignmentSchema = createInsertSchema(userAssignments).pick({
+export const insertUserAssignmentSubmissionSchema = createInsertSchema(userAssignmentSubmissions).pick({
   assignmentId: true,
   userId: true,
   status: true,
@@ -921,8 +995,8 @@ export const insertUserAssignmentSchema = createInsertSchema(userAssignments).pi
   autoGraded: true,
 });
 
-export type InsertUserAssignment = z.infer<typeof insertUserAssignmentSchema>;
-export type UserAssignment = typeof userAssignments.$inferSelect;
+export type InsertUserAssignmentSubmission = z.infer<typeof insertUserAssignmentSubmissionSchema>;
+export type UserAssignmentSubmission = typeof userAssignmentSubmissions.$inferSelect;
 
 // ============================================================================
 // Enhanced Categories and Tags System

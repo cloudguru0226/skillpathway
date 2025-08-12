@@ -44,6 +44,10 @@ app.use((req, res, next) => {
   
   const server = await registerRoutes(app);
   
+  // Register enhanced routes for content management
+  const { default: enhancedRoutes } = await import('./routes-enhanced');
+  app.use('/api', enhancedRoutes);
+  
   // Create admin user for demonstration
   await createAdminUserIfNotExists();
   console.log('Admin user setup completed. Use username: admin, password: admin123');
