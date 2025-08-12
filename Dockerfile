@@ -1,45 +1,50 @@
-# Simple single-stage Dockerfile for LMS
-FROM node:20-alpine
-
-# Install system dependencies
-RUN apk add --no-cache curl postgresql-client
+# Production-ready Dockerfile for LMS deployment
+FROM node:18-alpine AS base
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files first for better caching
+# Install system dependencies including PostgreSQL client
+RUN apk add --no-cache \
+    postgresql-client \
+    curl \
+    dumb-init \
+    && addgroup -g 1001 -S lms \
+    && adduser -S lms -u 1001 -G lms
+
+# Copy package files
 COPY package*.json ./
 
-# Install ALL dependencies (including dev) for build
-RUN npm install
+# Install ALL dependencies first (needed for build)
+RUN npm ci --no-audit --no-fund
 
 # Copy source code
 COPY . .
 
-# Build the application (dev dependencies are available)
-RUN npm run build
+# Build the application (as root to avoid permission issues)
+RUN NODE_ENV=production npm run build
 
-# Remove dev dependencies after build to save space
-RUN npm prune --production
+# Remove dev dependencies after build
+RUN npm prune --omit=dev
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+# Clean npm cache
+RUN npm cache clean --force
 
-# Copy entrypoint script and make it executable
-COPY docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh
+# Set proper ownership
+RUN chown -R lms:lms /app
 
-# Change ownership of app directory
-RUN chown -R nodejs:nodejs /app
-USER nodejs
+# Switch to non-root user
+USER lms
 
 # Expose port
 EXPOSE 5000
 
-# Add health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:5000/api/health || exit 1
+# Health check for container orchestration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:5000/api/health || exit 1
+
+# Use dumb-init as PID 1 to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
-CMD ["./docker-entrypoint.sh"]
+CMD ["npm", "run", "start"]

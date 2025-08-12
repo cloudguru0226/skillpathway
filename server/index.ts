@@ -1,10 +1,42 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import helmet from 'helmet';
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Security middleware - only enable in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https:"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Allow Vite scripts
+        connectSrc: ["'self'", "ws:", "wss:", "http:", "https:"]
+      }
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    }
+  }));
+} else {
+  // Development - minimal security headers
+  app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP in development
+    crossOriginEmbedderPolicy: false
+  }));
+}
+
+// Trust proxy for AWS load balancer
+app.set('trust proxy', 1);
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -78,21 +110,49 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  // Production-ready server configuration
+  const PORT = parseInt(process.env.PORT || '5000', 10);
+  const HOST = '0.0.0.0'; // Always bind to all interfaces for container deployment
+  
+  server.listen(PORT, HOST, () => {
+    log(`LMS serving on ${HOST}:${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+    
+    // Log important information for production
+    if (process.env.NODE_ENV === 'production') {
+      log('✅ Production mode enabled');
+      log('✅ Health endpoint: /api/health');
+      log('✅ Admin credentials: admin / admin123');
+      log('✅ Security headers enabled');
+      log('✅ Container ready for orchestration');
+    }
+  });
+  
+  // Graceful shutdown for container orchestration
+  const shutdown = (signal: string) => {
+    log(`Received ${signal}, shutting down gracefully...`);
+    server.close(() => {
+      log('Server closed');
+      process.exit(0);
+    });
+  };
+  
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
+  });
+  
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
   });
 })();
