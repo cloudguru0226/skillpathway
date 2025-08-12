@@ -1,5 +1,9 @@
 import { storage } from "./storage";
 import { sampleRoadmaps } from "./data/roadmaps";
+import { comprehensiveRoadmaps } from "./comprehensive-roadmaps";
+
+// Combine all available roadmaps
+const allRoadmaps = [...sampleRoadmaps, ...comprehensiveRoadmaps];
 
 export async function seedAllRoadmaps() {
   console.log("Starting complete roadmap seeding...");
@@ -8,18 +12,18 @@ export async function seedAllRoadmaps() {
     // Check how many roadmaps are currently in the database
     const existingRoadmaps = await storage.getRoadmaps();
     console.log(`Found ${existingRoadmaps.length} existing roadmaps in database`);
-    console.log(`Found ${sampleRoadmaps.length} roadmaps available to seed`);
+    console.log(`Found ${allRoadmaps.length} roadmaps available to seed`);
     
     // Log the numbers for debugging
-    console.log(`Comparing: existing=${existingRoadmaps.length}, available=${sampleRoadmaps.length}`);
+    console.log(`Comparing: existing=${existingRoadmaps.length}, available=${allRoadmaps.length}`);
     
-    // Force seeding all available roadmaps
-    console.log("Proceeding to seed all available roadmaps...");
+    // Force seeding ALL available roadmaps regardless of current count
+    console.log("Force seeding all available roadmaps to ensure completeness...");
     
     // Clear existing roadmaps if requested or seed additional ones
     let seededCount = 0;
     
-    for (const roadmapData of sampleRoadmaps) {
+    for (const roadmapData of allRoadmaps) {
       try {
         // Check if this roadmap already exists by title
         const exists = existingRoadmaps.some(r => r.title === roadmapData.title);
