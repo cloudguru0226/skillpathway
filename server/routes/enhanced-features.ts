@@ -225,7 +225,7 @@ export function registerEnhancedFeatures(app: Express) {
     
     try {
       const { search } = req.query;
-      const assignments = await storage.getAssignments({ search: search as string });
+      const assignments = await storage.getUserAssignments();
       res.json(assignments);
     } catch (error) {
       console.error("Error fetching assignments:", error);

@@ -231,6 +231,11 @@ export class EnhancedStorage implements IEnhancedStorage {
     return await db.select().from(userAssignments).orderBy(desc(userAssignments.assignedAt));
   }
 
+  // Alias for compatibility
+  async getAssignments(): Promise<UserAssignment[]> {
+    return this.getUserAssignments();
+  }
+
   async createUserAssignment(assignmentData: InsertUserAssignment): Promise<UserAssignment> {
     const result = await db.insert(userAssignments).values(assignmentData).returning();
     return result[0];

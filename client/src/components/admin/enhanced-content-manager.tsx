@@ -73,8 +73,8 @@ interface Roadmap {
 
 export default function EnhancedContentManager() {
   const [selectedRoadmapId, setSelectedRoadmapId] = useState<number | null>(null);
-  const [selectedSection, setSelectedSection] = useState<string>("");
-  const [selectedNode, setSelectedNode] = useState<string>("");
+  const [selectedSection, setSelectedSection] = useState<string>("all");
+  const [selectedNode, setSelectedNode] = useState<string>("all");
   const [isCreateResourceDialogOpen, setIsCreateResourceDialogOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<ContentResource | null>(null);
   const [newResource, setNewResource] = useState({
@@ -212,8 +212,8 @@ export default function EnhancedContentManager() {
     const resourceData = {
       ...newResource,
       roadmapId: selectedRoadmapId,
-      sectionTitle: selectedSection || undefined,
-      nodeId: selectedNode || undefined
+      sectionTitle: selectedSection !== "all" ? selectedSection : undefined,
+      nodeId: selectedNode !== "all" ? selectedNode : undefined
     };
     createResourceMutation.mutate(resourceData);
   };
@@ -276,12 +276,12 @@ export default function EnhancedContentManager() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Roadmap</Label>
-                  <Select value={selectedRoadmapId?.toString() || ""} onValueChange={(value) => setSelectedRoadmapId(value ? parseInt(value) : null)}>
+                  <Select value={selectedRoadmapId?.toString() || "all"} onValueChange={(value) => setSelectedRoadmapId(value === "all" ? null : parseInt(value))}>
                     <SelectTrigger>
                       <SelectValue placeholder="All roadmaps" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All roadmaps</SelectItem>
+                      <SelectItem value="all">All roadmaps</SelectItem>
                       {roadmaps?.map((roadmap: Roadmap) => (
                         <SelectItem key={roadmap.id} value={roadmap.id.toString()}>
                           {roadmap.title}
@@ -299,7 +299,7 @@ export default function EnhancedContentManager() {
                         <SelectValue placeholder="All sections" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All sections</SelectItem>
+                        <SelectItem value="all">All sections</SelectItem>
                         {selectedRoadmap.content.sections.map((section: any) => (
                           <SelectItem key={section.title} value={section.title}>
                             {section.title}
@@ -310,7 +310,7 @@ export default function EnhancedContentManager() {
                   </div>
                 )}
 
-                {selectedSection && selectedRoadmap && (
+                {selectedSection && selectedSection !== "all" && selectedRoadmap && (
                   <div className="space-y-2">
                     <Label>Node</Label>
                     <Select value={selectedNode} onValueChange={setSelectedNode}>
@@ -318,14 +318,14 @@ export default function EnhancedContentManager() {
                         <SelectValue placeholder="All nodes" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All nodes</SelectItem>
+                        <SelectItem value="all">All nodes</SelectItem>
                         {selectedRoadmap.content.sections
                           .find((s: any) => s.title === selectedSection)?.nodes
-                          .map((node: any) => (
+                          ?.map((node: any) => (
                             <SelectItem key={node.id} value={node.id}>
                               {node.title}
                             </SelectItem>
-                          ))}
+                          )) || []}
                       </SelectContent>
                     </Select>
                   </div>
